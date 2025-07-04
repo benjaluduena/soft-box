@@ -1,0 +1,276 @@
+:root {
+  --color-primario: #E0F2FE; /* celeste claro - tailwind lightblue-100 */
+  --color-secundario: #7DD3FC; /* celeste más fuerte - tailwind lightblue-300 */
+  --color-acento: #0EA5E9; /* azul claro - tailwind sky-500 */
+  --color-acento-hover: #0284C7; /* azul claro más oscuro - tailwind sky-600 */
+  --color-texto-oscuro: #082f49; /* Azul oscuro para texto - tailwind cyan-900 */
+  --color-texto-claro: #ffffff;
+  --color-fondo: #F0F9FF; /* Un blanco azulado muy claro - tailwind sky-50 */
+  --color-superficie: #ffffff; /* Blanco para tarjetas, modales */
+  --color-borde: #CBD5E1; /* Gris azulado claro - tailwind slate-300 */
+  --color-error: #F43F5E; /* tailwind rose-500 */
+  --color-exito: #10B981; /* tailwind emerald-500 */
+  --color-advertencia: #F59E0B; /* tailwind amber-500 */
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--color-fondo);
+  color: var(--color-texto-oscuro);
+  line-height: 1.6;
+}
+
+html, body { height: 100%; overflow: hidden; /* Evitar scroll en body */ }
+#app { min-height:100vh; display:flex; flex-direction:row; height: 100%;} /* Cambio a row para sidebar y main */
+
+/* Inputs & Botones Base */
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], input[type="datetime-local"], input[type="search"], select, textarea {
+  font-size: 0.95rem; padding: 0.65em 0.9em; border-radius: 8px;
+  border: 1px solid var(--color-borde); background-color: var(--color-superficie);
+  color: var(--color-texto-oscuro); transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--color-acento); box-shadow: 0 0 0 3px var(--color-primario);
+}
+
+button, .button { /* Clase genérica para enlaces que parecen botones */
+  font-size: 0.95rem; padding: 0.65em 1.2em; border-radius: 8px; border: none; cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s; font-weight: 600; text-align: center;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5em;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+button:hover, .button:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+button:active, .button:active { transform: translateY(0px); }
+
+/* Tipos de Botones */
+button.primary, .button.primary { background-color: var(--color-acento); color: var(--color-texto-claro); }
+button.primary:hover, .button.primary:hover { background-color: var(--color-acento-hover); }
+button.secondary, .button.secondary { background-color: var(--color-superficie); color: var(--color-acento); border: 1px solid var(--color-borde); }
+button.secondary:hover, .button.secondary:hover { background-color: var(--color-primario); border-color: var(--color-secundario); }
+button.danger, .button.danger { background-color: var(--color-error); color: var(--color-texto-claro); }
+button.danger:hover, .button.danger:hover { background-color: #dc2626; /* Red más oscuro */ }
+
+/* Estilos para el Sidebar */
+.sidebar {
+  background: linear-gradient(180deg, var(--color-acento) 0%, var(--color-secundario) 100%);
+  color: var(--color-texto-claro);
+  min-width: 220px; /* Ajustado */
+  width: 220px; /* Fijo para cálculo de main */
+  padding: 1.5em 1em;
+  height: 100vh; /* Ocupa toda la altura */
+  /* position: fixed; Ya no es fixed, es parte del flex row de #app */
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  z-index: 100; /* Por si acaso solapa algo */
+  overflow-y: auto; /* Scroll si el contenido es mucho */
+}
+
+.sidebar a {
+  color: var(--color-texto-claro);
+  text-decoration: none;
+  padding: 0.7em 1.2em;
+  border-radius: 8px;
+  transition: background-color 0.2s, color 0.2s;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.8em; /* Espacio para íconos */
+}
+.sidebar a.active, .sidebar a:hover {
+  background-color: rgba(255, 255, 255, 0.2); /* Un blanco translúcido */
+  color: var(--color-texto-claro);
+}
+
+/* Contenido principal */
+main {
+  /* margin-left: 220px; Ya no es necesario con flexbox en #app */
+  flex-grow: 1; /* Ocupa el resto del espacio */
+  padding: 2em;
+  /* width: calc(100% - 220px); Ya no es necesario */
+  overflow-y: auto; /* Scroll solo en main */
+  height: 100vh; /* Ocupa toda la altura */
+}
+
+/* Modales (Overlay y Contenido Interno) */
+.modal-overlay { /* El div que cubre toda la pantalla */
+  position: fixed;
+  inset: 0;
+  z-index: 150; /* Alto para estar sobre todo */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(8, 47, 73, 0.4); /* Azul oscuro translúcido */
+  backdrop-filter: blur(3px);
+}
+.modal-content-inner { /* El div hijo directo del overlay, que contiene el formulario/info */
+  background-color: var(--color-superficie);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 1.5em;
+  border: 1px solid var(--color-borde);
+  max-width: 500px; /* Ancho máximo por defecto */
+  width: 90%; /* Ancho responsive */
+  position: relative; /* Para el botón de cerrar absoluto */
+  animation: fadeInScale 0.3s ease-out;
+}
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.close-modal-btn { /* Botón X para cerrar modales */
+  position: absolute;
+  top: 0.8em;
+  right: 0.8em;
+  background: none;
+  border: none;
+  font-size: 1.8em;
+  color: var(--color-texto-oscuro);
+  cursor: pointer;
+  padding: 0.2em;
+  line-height: 1;
+}
+.close-modal-btn:hover { color: var(--color-error); }
+
+/* Estilos para Títulos */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-acento);
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 0.5em; /* Espacio debajo de los títulos */
+}
+h1 { font-size: 2.2rem; } /* Título muy grande, quizás para el nombre de la app si se muestra */
+h2 { font-size: 1.8rem; } /* Títulos de cada sección (Clientes, Inventario, etc.) */
+h3 { font-size: 1.5rem; } /* Subtítulos o títulos dentro de modales/tarjetas grandes */
+
+/* Clases de utilidad para colores de texto y visibilidad */
+.text-error { color: var(--color-error) !important; }
+.text-success { color: var(--color-exito) !important; }
+.text-warning { color: var(--color-advertencia) !important; }
+.hidden { display: none !important; } /* Para ocultar elementos con JS */
+
+/* Responsive (Mobile) */
+@media (max-width: 768px) {
+  #app { flex-direction: column; } /* Sidebar arriba, luego main */
+  .sidebar {
+    min-width: 100%; /* Ocupa todo el ancho */
+    width: 100%;
+    height: auto; /* Altura automática */
+    position: static; /* Ya no es fixed */
+    flex-direction: row; /* Enlaces en fila */
+    overflow-x: auto; /* Scroll horizontal para muchos enlaces */
+    padding: 0.5em;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  .sidebar a { padding: 0.5em 0.8em; font-size:0.9rem; }
+  .sidebar a .link-text { display: inline; } /* Mostrar texto en mobile también, o ajustar */
+
+  main {
+    margin-left: 0; /* Sin margen ya que sidebar no es fixed */
+    width: 100%;
+    padding: 1em; /* Menos padding en mobile */
+    height: calc(100vh - YOUR_SIDEBAR_HEIGHT_HERE); /* Ajustar si el sidebar tiene altura fija en mobile */
+  }
+
+  h2 {font-size: 1.5rem;}
+  h3 {font-size: 1.25rem;}
+  .modal-content-inner { width: 95%; padding: 1em; } /* Modales más anchos y con menos padding */
+}
+
+/* Placeholder para cuando no hay datos */
+.no-data-placeholder {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-borde); /* Un color suave */
+  font-style: italic;
+}
+
+/*
+  Nota: Las clases de Tailwind usadas directamente en los archivos JS
+  (ej: bg-blue-600, text-red-500) seguirán funcionando porque Tailwind está
+  incluido. Si se desea que esas clases usen las variables CSS de este archivo,
+  se necesitarían overrides específicos o cambiar las clases en el JS.
+  Por simplicidad inicial, este archivo se centra en la estructura y elementos base.
+  Los estilos más detallados de componentes se harán con Tailwind directamente en JS
+  o con clases específicas en este archivo si es necesario un control más global.
+*/
+
+/* Para asegurar que los botones de Tailwind usen las variables CSS (Ejemplo) */
+/* Si en JS se usa <button class="bg-blue-600 ..."> */
+.bg-blue-600 { background-color: var(--color-acento) !important; }
+.bg-blue-600:hover { background-color: var(--color-acento-hover) !important; }
+
+.text-red-600 { color: var(--color-error) !important; }
+.text-green-600 { color: var(--color-exito) !important; }
+.border-gray-300 { border-color: var(--color-borde) !important; }
+
+/* Estilos para las "cards" de listas (ej: lista de clientes) */
+/* Se usarán clases de Tailwind en el JS para esto, pero aquí una base si se prefiere CSS puro */
+.list-item-card {
+  background-color: var(--color-superficie);
+  border-radius: 10px; /* Tailwind: rounded-lg o rounded-xl */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07); /* Tailwind: shadow-md o shadow-lg */
+  padding: 1.25rem; /* Tailwind: p-5 */
+  border: 1px solid var(--color-borde);
+  transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+.list-item-card:hover {
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1); /* Tailwind: hover:shadow-xl */
+  transform: translateY(-2px); /* Tailwind: hover:-translate-y-0.5 */
+}
+.list-item-card .item-title { /* Para el nombre principal en la tarjeta */
+  margin-bottom: 0.25rem; /* Tailwind: mb-1 */
+  font-size: 1.15rem;
+  font-weight: 600; /* Tailwind: font-semibold */
+  color: var(--color-acento);
+}
+.list-item-card .item-subtitle {
+  font-size: 0.85rem;
+  color: #555; /* Un gris medio, Tailwind: text-gray-600 o text-gray-700 */
+  margin-bottom: 0.1rem; /* Tailwind: mb-px */
+}
+.list-item-card .item-actions { /* Contenedor de botones de acción */
+  margin-top: 1rem; /* Tailwind: mt-4 */
+  display: flex; /* Tailwind: flex */
+  gap: 0.5rem; /* Tailwind: gap-2 */
+  flex-wrap: wrap; /* Tailwind: flex-wrap */
+}
+.item-actions button, .item-actions .button { /* Botones de acción dentro de la tarjeta */
+  padding: 0.4em 0.8em;
+  font-size: 0.85rem;
+}
+
+/* Badges (ej: para estado de stock, rol de usuario) */
+.badge {
+  padding: 0.2em 0.6em; border-radius: 12px; font-size: 0.75rem;
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block;
+}
+.badge-warning { background-color: var(--color-advertencia); color: var(--color-texto-oscuro); }
+.badge-success { background-color: var(--color-exito); color: var(--color-texto-claro); }
+.badge-danger { background-color: var(--color-error); color: var(--color-texto-claro); }
+.badge-info { background-color: var(--color-secundario); color: var(--color-texto-oscuro); }
+.badge-neutral { background-color: var(--color-borde); color: var(--color-texto-oscuro); }
+
+/* Calendario de Turnos */
+#calendario-mensual button {
+  min-height: 6rem; padding: 0.5rem; border: 1px solid var(--color-borde);
+  background-color: var(--color-superficie); transition: background-color 0.2s, box-shadow 0.2s;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+#calendario-mensual button:hover { background-color: var(--color-primario); box-shadow: 0 0 0 2px var(--color-secundario) inset; }
+#calendario-mensual button.has-events { /* Clase a añadir con JS si el día tiene turnos */
+  background-color: var(--color-primario) !important; border: 1px solid var(--color-secundario); font-weight: bold;
+}
+#calendario-mensual button .day-number { font-size:1.1rem; color: var(--color-texto-oscuro); }
+#calendario-mensual .event-indicator { /* Span para el puntito indicador de evento */
+  width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-acento); display:block; margin-top: 0.3rem;
+}
+@media (max-width: 768px) {
+  #calendario-mensual button { min-height: 4.5rem; font-size: 0.8rem;}
+  #calendario-mensual button .day-number { font-size: 1rem; }
+}

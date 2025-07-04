@@ -2,18 +2,21 @@ import { supabase } from '../supabaseClient.js';
 
 export function renderLogin(container, onSuccess) {
   container.innerHTML = `
-    <div class="min-h-screen flex items-center justify-center bg-gray-100">
-      <div class="bg-white shadow-lg rounded-xl p-8 w-full max-w-sm">
-        <h2 class="text-2xl font-bold mb-6 text-center text-blue-700">Iniciar sesión</h2>
+    <div class="min-h-screen flex items-center justify-center" style="background-color: var(--color-fondo);">
+      <div class="shadow-lg rounded-xl p-8 w-full max-w-sm modal-content-inner"> {/* Usando modal-content-inner para consistencia */}
+        <img src="/img/logo.png" alt="TireTask Logo" class="w-24 h-24 mx-auto mb-4"/> {/* Asumiendo que tienes un logo */}
+        <h2 class="text-2xl font-bold mb-6 text-center" style="color: var(--color-acento);">Iniciar sesión</h2>
         <form id="login-form" class="flex flex-col gap-4">
-          <input type="email" id="email" placeholder="Correo" required autofocus class="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
-          <input type="password" id="password" placeholder="Contraseña" required class="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
-          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded transition">Ingresar</button>
-          <div id="login-error" class="text-red-600 text-sm text-center"></div>
+          <input type="email" id="email" placeholder="Correo electrónico" required autofocus />
+          <input type="password" id="password" placeholder="Contraseña" required />
+          <button type="submit" class="primary">Ingresar</button> {/* Usando clase de botón primario */}
+          <div id="login-error" class="text-error text-sm text-center"></div> {/* Usando clase text-error */}
         </form>
       </div>
     </div>
   `;
+  // Crear carpeta public/img y añadir un logo logo.png si no existe.
+  // Por ahora, si no existe, el alt text se mostrará.
   const form = document.getElementById('login-form');
   const errorDiv = document.getElementById('login-error');
   form.onsubmit = async (e) => {

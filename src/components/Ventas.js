@@ -10,55 +10,72 @@ export async function renderVentas(container, usuario_id) {
   let plazoCheque = 30;
 
   container.innerHTML = `
-    <div class="max-w-3xl mx-auto py-8 px-4">
-      <h2 class="text-2xl font-bold text-blue-700 mb-6">Ventas</h2>
-      <div class="bg-white shadow rounded-xl p-6 mb-6">
-        <form id="ventas-form" class="flex flex-col gap-4">
-          <div class="flex flex-col sm:flex-row gap-4">
-            <label class="flex-1">
-              <span class="block text-sm font-semibold text-gray-700 mb-1">Cliente</span>
-              <select id="select-cliente" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"></select>
-            </label>
-            <label class="flex-1">
-              <span class="block text-sm font-semibold text-gray-700 mb-1">Producto</span>
+    <div class="max-w-4xl mx-auto py-6 px-4">
+      <h2 class="text-2xl font-bold mb-6" style="color: var(--color-acento);">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 inline-block mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zm-8.9-5h7.45c.75 0 1.41-.41 1.75-1.03l3.86-7.01L19.42 4H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.44C4.52 15.37 5.48 17 7 17h12v-2H7l1.1-2z"/></svg>
+        Registrar Venta
+      </h2>
+      <div class="list-item-card p-6 mb-8"> {/* Usando list-item-card para el formulario */}
+        <form id="ventas-form" class="flex flex-col gap-5">
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="select-cliente" class="block text-sm font-medium mb-1">Cliente</label>
+              <select id="select-cliente" required></select>
+            </div>
+            <div>
+              <label for="select-producto" class="block text-sm font-medium mb-1">Producto</label>
               <div class="flex gap-2">
-                <select id="select-producto" class="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"></select>
-                <button type="button" id="agregar-producto" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded transition">Agregar</button>
+                <select id="select-producto" class="flex-1"></select>
+                <button type="button" id="agregar-producto" class="button secondary">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                  Agregar
+                </button>
               </div>
-            </label>
+            </div>
           </div>
+
           <div id="carrito-lista" class="mt-2"></div>
-          <div class="flex flex-col sm:flex-row gap-4">
-            <label class="flex-1">
-              <span class="block text-sm font-semibold text-gray-700 mb-1">Método de pago</span>
-              <select id="metodo-pago" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label for="metodo-pago" class="block text-sm font-medium mb-1">Método de pago</label>
+              <select id="metodo-pago">
                 <option value="efectivo">Efectivo</option>
-                <option value="crédito">Crédito</option>
-                <option value="débito">Débito</option>
+                <option value="crédito">Tarjeta de Crédito</option>
+                <option value="débito">Tarjeta de Débito</option>
                 <option value="cheque">Cheque</option>
+                {/* <option value="transferencia">Transferencia</option> */}
               </select>
-            </label>
-            <label class="flex-1" id="plazo-cheque-label" style="display:none;">
-              <span class="block text-sm font-semibold text-gray-700 mb-1">Plazo (días)</span>
-              <select id="plazo-cheque" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+            <div id="plazo-cheque-label" style="display:none;">
+              <label for="plazo-cheque" class="block text-sm font-medium mb-1">Plazo del Cheque (días)</label>
+              <select id="plazo-cheque">
                 <option value="30">30 días</option>
                 <option value="60">60 días</option>
                 <option value="90">90 días</option>
               </select>
-            </label>
-            <label class="flex-1">
-              <span class="block text-sm font-semibold text-gray-700 mb-1">Descuento (%)</span>
-              <input type="number" id="input-descuento" value="0" min="0" max="100" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </label>
+            </div>
+            <div>
+              <label for="input-descuento" class="block text-sm font-medium mb-1">Descuento (%)</label>
+              <input type="number" id="input-descuento" value="0" min="0" max="100" step="0.01" />
+            </div>
           </div>
-          <div class="flex items-center justify-between mt-2">
-            <span class="text-lg font-bold text-gray-700">Total: $<span id="total-venta">0.00</span></span>
-            <button type="button" id="confirmar-venta" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded transition">Confirmar venta</button>
+
+          <div class="flex items-center justify-between mt-4 pt-4 border-t border-[var(--color-borde)]">
+            <span class="text-xl font-bold" style="color: var(--color-texto-oscuro);">Total:
+              <span id="total-venta" style="color: var(--color-acento);">$0.00</span>
+            </span>
+            <button type="button" id="confirmar-venta" class="button primary py-3 px-6"> {/* Botón más grande */}
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+              Confirmar Venta
+            </button>
           </div>
-          <div id="venta-error" class="text-red-600 text-sm text-center"></div>
-          <div id="venta-ok" class="text-green-600 text-sm text-center"></div>
+          <div id="venta-error" class="text-error text-sm text-center mt-2"></div>
+          <div id="venta-ok" class="text-success text-sm text-center mt-2"></div>
         </form>
       </div>
+      {/* Aquí irá el Historial de Ventas */}
     </div>
   `;
 
@@ -82,29 +99,38 @@ export async function renderVentas(container, usuario_id) {
   function renderCarrito() {
     const div = document.getElementById('carrito-lista');
     if (!carrito.length) {
-      div.innerHTML = '<p class="text-gray-500">Carrito vacío.</p>';
+      div.innerHTML = '<p class="no-data-placeholder py-4">El carrito está vacío.</p>'; // Usar placeholder
+      document.getElementById('total-venta').textContent = '0.00'; // Asegurar que total se actualice
       return;
     }
+    // Usar estilos de tabla de new_styles.css
     div.innerHTML = `
-      <div class="overflow-x-auto">
-        <table class="min-w-full border border-gray-200 rounded-lg text-sm">
-          <thead class="bg-blue-50">
+      <div class="overflow-x-auto rounded-lg border border-[var(--color-borde)]">
+        <table class="w-full text-sm">
+          <thead>
             <tr>
-              <th class="px-3 py-2 text-left">Producto</th>
-              <th class="px-3 py-2">Cant.</th>
-              <th class="px-3 py-2">Precio</th>
-              <th class="px-3 py-2">Subtotal</th>
-              <th></th>
+              <th class="text-left">Producto</th>
+              <th>Cantidad</th>
+              <th>Precio Unit.</th>
+              <th>Subtotal</th>
+              <th>Acción</th>
             </tr>
           </thead>
           <tbody>
             ${carrito.map((item, i) => `
               <tr>
-                <td class="px-3 py-2">${item.nombre}</td>
-                <td class="px-3 py-2"><input type="number" min="1" value="${item.cantidad}" data-idx="${i}" class="input-cantidad w-16 px-2 py-1 border border-gray-300 rounded" /></td>
-                <td class="px-3 py-2">$${item.precio_unitario.toFixed(2)}</td>
-                <td class="px-3 py-2">$${(item.precio_unitario * item.cantidad).toFixed(2)}</td>
-                <td class="px-3 py-2"><button data-idx="${i}" class="eliminar-item text-red-600 hover:text-red-800 font-bold text-lg">×</button></td>
+                <td>${item.nombre}</td>
+                <td class="text-center">
+                  <input type="number" min="1" value="${item.cantidad}" data-idx="${i}"
+                         class="input-cantidad w-20 text-center py-1" />
+                </td>
+                <td class="text-right">$${item.precio_unitario.toFixed(2)}</td>
+                <td class="text-right">$${(item.precio_unitario * item.cantidad).toFixed(2)}</td>
+                <td class="text-center">
+                  <button data-idx="${i}" class="button danger eliminar-item p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  </button>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -188,8 +214,7 @@ export async function renderVentas(container, usuario_id) {
       usuario_id,
       metodo_pago: metodoPago,
       descuento,
-      total,
-      plazo_cheque: metodoPago === 'cheque' ? plazoCheque : null
+      total
     }]).select().single();
     if (error) {
       errorDiv.textContent = error.message;
@@ -230,40 +255,58 @@ export async function renderVentas(container, usuario_id) {
     let month = new Date().getMonth();
     let desde = new Date(year, month, 1).toISOString().slice(0, 10);
     let hasta = new Date(year, month + 1, 0).toISOString().slice(0, 10);
-    let query = supabase.from('ventas').select('*,clientes(nombre)').gte('created_at', desde).lte('created_at', hasta).order('created_at', { ascending: false });
+
+    let query = supabase.from('ventas').select('*,clientes(nombre)')
+      .gte('created_at', desde)
+      .lte('created_at', `${hasta}T23:59:59`) // Incluir todo el día hasta
+      .order('created_at', { ascending: false });
+
     if (filtroCliente) query = query.ilike('clientes.nombre', `%${filtroCliente}%`);
-    if (filtroFecha) query = query.eq('created_at', filtroFecha);
+    // filtroFecha no se usa actualmente en la UI, pero se mantiene la lógica
+    if (filtroFecha) query = query.gte('created_at', filtroFecha).lte('created_at', `${filtroFecha}T23:59:59`);
+
     const { data, error } = await query;
+
     if (error) {
-      historialDiv.innerHTML = '<div class="text-red-600">Error al cargar historial de ventas</div>';
+      historialDiv.innerHTML = `<div class="text-error p-4 text-center">Error al cargar historial: ${error.message}</div>`;
       return;
     }
+
     historialDiv.innerHTML = `
-      <div class="mb-4 flex flex-col sm:flex-row gap-2 items-center justify-between">
-        <h3 class="text-xl font-bold text-blue-700">Historial de ventas (mes actual)</h3>
-        <input id="buscar-venta-cliente" type="text" placeholder="Buscar por cliente..." class="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
-      </div>
-      <div id="ventas-lista-historial">
-        ${(data||[]).map(v => `
-          <div class="bg-white shadow rounded-xl p-4 mb-2 border border-gray-100">
-            <div class="flex items-center justify-between cursor-pointer" data-id="${v.id}">
-              <div>
-                <span class="font-bold text-blue-800">${v.clientes?.nombre || ''}</span>
-                <span class="text-gray-500 text-sm ml-2">${new Date(v.created_at).toLocaleString('es-AR')}</span>
+      <div class="mt-10">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <h3 class="text-xl font-bold" style="color: var(--color-acento);">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            Historial de Ventas (Mes Actual)
+          </h3>
+          <input id="buscar-venta-cliente" type="search" placeholder="Buscar por cliente..." class="px-3 py-2"/>
+        </div>
+        <div id="ventas-lista-historial" class="space-y-3">
+          ${(!data || data.length === 0)
+            ? '<p class="no-data-placeholder">No hay ventas registradas este mes.</p>'
+            : data.map(v => `
+              <div class="list-item-card">
+                <div class="flex items-center justify-between cursor-pointer" data-id="${v.id}">
+                  <div>
+                    <div class="item-title">${v.clientes?.nombre || 'Cliente Desconocido'}</div>
+                    <div class="item-subtitle text-xs">${new Date(v.created_at).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
+                  </div>
+                  <div class="text-right">
+                    <span class="font-bold text-lg" style="color: var(--color-exito);">$${v.total?.toFixed(2)}</span>
+                    <div class="text-xs item-subtitle">Método: ${v.metodo_pago}</div>
+                  </div>
+                </div>
+                <div class="detalle-venta hidden mt-3 pt-3 border-t border-[var(--color-borde)]" id="detalle-venta-${v.id}"></div>
               </div>
-              <span class="font-bold text-green-700">$${v.total?.toFixed(2)}</span>
-            </div>
-            <div class="detalle-venta hidden mt-2" id="detalle-venta-${v.id}"></div>
-          </div>
-        `).join('') || '<p class="text-gray-500">No hay ventas este mes.</p>'}
-      </div>
-    `;
-    // Buscar por cliente
-    document.getElementById('buscar-venta-cliente').oninput = (e) => cargarHistorialVentas(e.target.value);
-    // Expandir detalle
-    (data||[]).forEach(v => {
-      const row = historialDiv.querySelector(`[data-id="${v.id}"]`);
-      row.onclick = () => toggleDetalleVenta(v.id);
+            `).join('')
+          }
+        </div>
+      </div>`;
+
+    document.getElementById('buscar-venta-cliente').oninput = (e) => cargarHistorialVentas(e.target.value, filtroFecha);
+
+    historialDiv.querySelectorAll('.list-item-card [data-id]').forEach(header => {
+      header.onclick = () => toggleDetalleVenta(header.dataset.id);
     });
   }
 
@@ -271,19 +314,43 @@ export async function renderVentas(container, usuario_id) {
     const detalleDiv = document.getElementById(`detalle-venta-${ventaId}`);
     if (!detalleDiv.classList.contains('hidden')) {
       detalleDiv.classList.add('hidden');
-      detalleDiv.innerHTML = '';
+      detalleDiv.innerHTML = ''; // Limpiar para recargar si se vuelve a abrir
       return;
     }
-    // Traer detalle de venta
-    const { data: detalles } = await supabase.from('venta_detalle').select('*,productos(nombre)').eq('venta_id', ventaId);
-    detalleDiv.innerHTML = detalles && detalles.length ? `
-      <table class="w-full text-sm mt-2">
-        <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr></thead>
-        <tbody>
-          ${detalles.map(d => `<tr><td>${d.productos?.nombre || ''}</td><td>${d.cantidad}</td><td>$${d.precio_unitario?.toFixed(2)}</td><td>$${d.subtotal?.toFixed(2)}</td></tr>`).join('')}
-        </tbody>
-      </table>
-    ` : '<p class="text-gray-500">Sin detalle.</p>';
+
+    const { data: detalles, error } = await supabase
+      .from('venta_detalle')
+      .select('cantidad, precio_unitario, subtotal, productos(nombre)')
+      .eq('venta_id', ventaId);
+
+    if (error) {
+      detalleDiv.innerHTML = `<p class="text-error">Error al cargar detalle: ${error.message}</p>`;
+      detalleDiv.classList.remove('hidden');
+      return;
+    }
+
+    if (detalles && detalles.length) {
+      detalleDiv.innerHTML = `
+        <h4 class="text-sm font-semibold mb-2" style="color: var(--color-texto-oscuro);">Detalle de la Venta:</h4>
+        <div class="overflow-x-auto rounded-md border border-[var(--color-borde)]">
+          <table class="w-full text-xs">
+            <thead>
+              <tr><th class="text-left">Producto</th><th>Cant.</th><th class="text-right">P. Unit.</th><th class="text-right">Subtotal</th></tr>
+            </thead>
+            <tbody>
+              ${detalles.map(d => `
+                <tr>
+                  <td>${d.productos?.nombre || 'Producto no encontrado'}</td>
+                  <td class="text-center">${d.cantidad}</td>
+                  <td class="text-right">$${d.precio_unitario?.toFixed(2)}</td>
+                  <td class="text-right">$${d.subtotal?.toFixed(2)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    } else {
+      detalleDiv.innerHTML = '<p class="no-data-placeholder text-xs">No hay detalles para esta venta.</p>';
+    }
     detalleDiv.classList.remove('hidden');
   }
 

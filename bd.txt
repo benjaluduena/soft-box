@@ -111,3 +111,68 @@ CREATE TABLE public.ventas (
   CONSTRAINT ventas_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id),
   CONSTRAINT ventas_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.profiles(id)
 );
+
+-- SUGERENCIAS DE MEJORA DE BASE DE DATOS (Jules, IA Asistente) --
+
+-- 1. ON DELETE / ON UPDATE en Claves Foráneas:
+--    Considerar añadir políticas ON DELETE (SET NULL, CASCADE, RESTRICT) y ON UPDATE a las FKs.
+--    Ejemplo:
+--    ALTER TABLE public.vehiculos DROP CONSTRAINT vehiculos_cliente_id_fkey;
+--    ALTER TABLE public.vehiculos ADD CONSTRAINT vehiculos_cliente_id_fkey
+--        FOREIGN KEY (cliente_id) REFERENCES public.clientes(id) ON DELETE CASCADE;
+--    (Aplicar lógicamente según las necesidades del negocio para cada relación)
+
+-- 2. ÍNDICES (INDEXES):
+--    Para mejorar el rendimiento de consultas frecuentes.
+--    Ejemplos:
+--    CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON public.clientes(nombre text_pattern_ops); -- text_pattern_ops para búsquedas con LIKE 'texto%'
+--    CREATE INDEX IF NOT EXISTS idx_productos_nombre ON public.productos(nombre text_pattern_ops);
+--    CREATE INDEX IF NOT EXISTS idx_vehiculos_patente ON public.vehiculos(patente);
+--    CREATE INDEX IF NOT EXISTS idx_turnos_fecha ON public.turnos(fecha);
+--    CREATE INDEX IF NOT EXISTS idx_ventas_created_at ON public.ventas(created_at);
+--    CREATE INDEX IF NOT EXISTS idx_compras_created_at ON public.compras(created_at);
+--    -- Considerar también índices en todas las columnas FOREIGN KEY si no los crea la BD automáticamente.
+
+-- 3. PRODUCTOS.PRECIO_CALCULADO:
+--    Para asegurar que siempre se actualice, si se usa PostgreSQL 12+, considerar:
+--    ALTER TABLE public.productos DROP COLUMN precio_calculado;
+--    ALTER TABLE public.productos ADD COLUMN precio_calculado numeric GENERATED ALWAYS AS (costo * (1 + margen)) STORED;
+--    Si no, un trigger sería la alternativa para recalcular en cada UPDATE de costo o margen.
+
+-- 4. VENTAS.METODO_PAGO:
+--    El frontend ahora maneja 'cheque'. Actualizar la restricción CHECK:
+--    ALTER TABLE public.ventas DROP CONSTRAINT ventas_metodo_pago_check;
+--    ALTER TABLE public.ventas ADD CONSTRAINT ventas_metodo_pago_check
+--        CHECK (metodo_pago = ANY (ARRAY['efectivo'::text, 'crédito'::text, 'débito'::text, 'cheque'::text, 'transferencia'::text]));
+--    (Añadir 'transferencia' u otros si son necesarios)
+
+-- 5. VENTAS.PLAZO_CHEQUE:
+--    Si el campo 'plazo_cheque' (eliminado del JS) fuera necesario para los pagos con cheque,
+--    se debería añadir a la tabla ventas:
+--    ALTER TABLE public.ventas ADD COLUMN plazo_cheque integer NULL;
+
+-- 6. SOFT DELETES (Borrado Lógico):
+--    Para tablas como clientes, productos, etc., si se quiere evitar la pérdida de datos:
+--    ALTER TABLE public.clientes ADD COLUMN deleted_at timestamp without time zone DEFAULT NULL;
+--    (Y actualizar las consultas de la aplicación para filtrar por `deleted_at IS NULL`)
+
+-- 7. UNICIDAD (Unique Constraints):
+--    Considerar para campos que deben ser únicos.
+--    Ejemplos:
+--    ALTER TABLE public.clientes ADD CONSTRAINT clientes_email_unique UNIQUE (email);
+--    ALTER TABLE public.vehiculos ADD CONSTRAINT vehiculos_patente_unique UNIQUE (patente); -- (Considerar contexto regional)
+--    ALTER TABLE public.proveedores ADD CONSTRAINT proveedores_cuit_unique UNIQUE (cuit);
+
+-- 8. NOT NULL Constraints:
+--    Revisar si algunos campos que actualmente permiten NULL deberían ser NOT NULL.
+--    Por ejemplo, en `productos`: `costo` y `margen` podrían ser `NOT NULL DEFAULT 0` si siempre deben tener un valor.
+--    En `vehiculos`: `marca`, `modelo`, `patente`, `año` son cruciales. Quizás `cliente_id` también.
+--    Ejemplo: ALTER TABLE public.productos ALTER COLUMN costo SET NOT NULL, ALTER COLUMN costo SET DEFAULT 0;
+
+-- 9. COMENTARIOS EN COLUMNAS/TABLAS:
+--    Para mejorar la documentación del esquema directamente en la BD.
+--    Ejemplo:
+--    COMMENT ON COLUMN public.productos.margen IS 'Margen de ganancia expresado como decimal (ej: 0.3 para 30%)';
+--    COMMENT ON TABLE public.turnos IS 'Almacena los turnos agendados para clientes y vehículos';
+
+-- Fin de Sugerencias --
