@@ -1,0 +1,61 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f7f7f7;
+  color: #222;
+}
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+input, button {
+  font-size: 1rem;
+  padding: 0.75em;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin-bottom: 1em;
+}
+button {
+  background: #1e88e5;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button:hover {
+  background: #1565c0;
+}
+.sidebar {
+  background: #222;
+  color: #fff;
+  min-width: 200px;
+  padding: 1em 0.5em;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+.sidebar a {
+  color: #fff;
+  text-decoration: none;
+  padding: 0.5em 1em;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.sidebar a.active, .sidebar a:hover {
+  background: #1e88e5;
+}
+@media (max-width: 600px) {
+  .sidebar {
+    min-width: 60px;
+    padding: 0.5em 0.2em;
+  }
+  .sidebar a {
+    padding: 0.5em 0.2em;
+    font-size: 0.9em;
+  }
+} 

@@ -1,0 +1,113 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.clientes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  nombre text NOT NULL,
+  telefono text,
+  email text,
+  direccion text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT clientes_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.compra_detalle (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  compra_id uuid,
+  producto_id uuid,
+  cantidad integer,
+  precio_unitario numeric,
+  subtotal numeric,
+  CONSTRAINT compra_detalle_pkey PRIMARY KEY (id),
+  CONSTRAINT compra_detalle_producto_id_fkey FOREIGN KEY (producto_id) REFERENCES public.productos(id),
+  CONSTRAINT compra_detalle_compra_id_fkey FOREIGN KEY (compra_id) REFERENCES public.compras(id)
+);
+CREATE TABLE public.compras (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  proveedor_id uuid,
+  usuario_id uuid,
+  total numeric,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT compras_pkey PRIMARY KEY (id),
+  CONSTRAINT compras_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.profiles(id),
+  CONSTRAINT compras_proveedor_id_fkey FOREIGN KEY (proveedor_id) REFERENCES public.proveedores(id)
+);
+CREATE TABLE public.productos (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  nombre text NOT NULL,
+  tipo text,
+  marca text,
+  compatible_con text,
+  proveedor_id uuid,
+  stock integer DEFAULT 0,
+  costo numeric,
+  margen numeric,
+  precio_calculado numeric DEFAULT (costo * ((1)::numeric + margen)),
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT productos_pkey PRIMARY KEY (id),
+  CONSTRAINT productos_proveedor_id_fkey FOREIGN KEY (proveedor_id) REFERENCES public.proveedores(id)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  nombre text,
+  apellido text,
+  rol text CHECK (rol = ANY (ARRAY['admin'::text, 'empleado'::text, 'contador'::text])),
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.proveedores (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  nombre text NOT NULL,
+  cuit text,
+  telefono text,
+  email text,
+  rubro text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT proveedores_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.turnos (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  cliente_id uuid,
+  vehiculo_id uuid,
+  fecha timestamp without time zone NOT NULL,
+  motivo text,
+  estado text DEFAULT 'pendiente'::text CHECK (estado = ANY (ARRAY['pendiente'::text, 'confirmado'::text, 'cancelado'::text, 'realizado'::text])),
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT turnos_pkey PRIMARY KEY (id),
+  CONSTRAINT turnos_vehiculo_id_fkey FOREIGN KEY (vehiculo_id) REFERENCES public.vehiculos(id),
+  CONSTRAINT turnos_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id)
+);
+CREATE TABLE public.vehiculos (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  cliente_id uuid,
+  marca text,
+  modelo text,
+  patente text,
+  año integer,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT vehiculos_pkey PRIMARY KEY (id),
+  CONSTRAINT vehiculos_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id)
+);
+CREATE TABLE public.venta_detalle (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  venta_id uuid,
+  producto_id uuid,
+  cantidad integer,
+  precio_unitario numeric,
+  subtotal numeric,
+  CONSTRAINT venta_detalle_pkey PRIMARY KEY (id),
+  CONSTRAINT venta_detalle_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas(id),
+  CONSTRAINT venta_detalle_producto_id_fkey FOREIGN KEY (producto_id) REFERENCES public.productos(id)
+);
+CREATE TABLE public.ventas (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  cliente_id uuid,
+  usuario_id uuid,
+  metodo_pago text CHECK (metodo_pago = ANY (ARRAY['efectivo'::text, 'crédito'::text, 'débito'::text])),
+  descuento numeric,
+  total numeric,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT ventas_pkey PRIMARY KEY (id),
+  CONSTRAINT ventas_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id),
+  CONSTRAINT ventas_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.profiles(id)
+);
