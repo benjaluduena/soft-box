@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TireTask - Sistema de gestión integral para talleres mecánicos y gomerías. Control de inventario, ventas, clientes y turnos.">
+  <meta name="keywords" content="taller mecánico, gomería, gestión, inventario, ventas, clientes, turnos">
+  <meta name="author" content="TireTask">
+  <meta name="theme-color" content="#3b82f6">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tiretask.com/">
+  <meta property="og:title" content="TireTask - Gestión de Talleres Mecánicos">
+  <meta property="og:description" content="Sistema de gestión integral para talleres mecánicos y gomerías">
+  <meta property="og:image" content="https://tiretask.com/og-image.jpg">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://tiretask.com/">
+  <meta property="twitter:title" content="TireTask - Gestión de Talleres Mecánicos">
+  <meta property="twitter:description" content="Sistema de gestión integral para talleres mecánicos y gomerías">
+  <meta property="twitter:image" content="https://tiretask.com/og-image.jpg">
+  
+  <title>TireTask - Gestión de Talleres Mecánicos</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  
+  <!-- Preconnect para mejorar rendimiento -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://dmteqmtogrdkbdqsavoa.supabase.co">
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Configuración de Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Loading inicial -->
+  <div id="loading-screen" class="fixed inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center z-50">
+    <div class="text-center">
+      <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">TireTask</h1>
+      <p class="text-gray-600">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- Contenedor principal de la aplicación -->
+  <div id="app" class="min-h-screen"></div>
+
+  <!-- Configuración de Supabase -->
+  <script>
+    // Configuración de Supabase
+    window.SUPABASE_URL = "https://dmteqmtogrdkbdqsavoa.supabase.co";
+    window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtdGVxbXRvZ3Jka2JkcXNhdm9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MDU4NDYsImV4cCI6MjA2NzA4MTg0Nn0.WmDAGxFCAGqhC7T0rChNdlUUZjt7nXuF6dnGEpe78GI";
+    
+    // Función para ocultar la pantalla de carga
+    function hideLoadingScreen() {
+      const loadingScreen = document.getElementById('loading-screen');
+      if (loadingScreen) {
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+        }, 300);
+      }
+    }
+    
+    // Manejar errores globales
+    window.addEventListener('error', (event) => {
+      console.error('Error global:', event.error);
+    });
+    
+    // Manejar errores de promesas no capturadas
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Promesa rechazada no capturada:', event.reason);
+    });
+  </script>
+  
+  <!-- Script principal de la aplicación -->
+  <script type="module" src="../src/main.js"></script>
+  
+  <!-- Service Worker para PWA (opcional) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('SW registrado:', registration);
+          })
+          .catch(registrationError => {
+            console.log('SW registro falló:', registrationError);
+          });
+      });
+    }
+  </script>
+</body>
+</html> 
