@@ -91,9 +91,7 @@
     }
     
     // Manejar errores globales
-    window.addEventListener('error', (event) => {
-      console.error('Error global:', event.error);
-    });
+   
     
     // Manejar errores de promesas no capturadas
     window.addEventListener('unhandledrejection', (event) => {
@@ -104,7 +102,8 @@
   <!-- Script principal de la aplicación -->
   <script type="module" src="../src/main.js"></script>
   
-  <!-- Service Worker para PWA (opcional) -->
+  <!-- Service Worker desactivado (no hay sw.js). Habilitar cuando se implemente. -->
+  <!--
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -118,5 +117,6 @@
       });
     }
   </script>
+  -->
 </body>
 </html> 

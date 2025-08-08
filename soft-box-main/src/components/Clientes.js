@@ -295,6 +295,11 @@ export async function renderClientes(container) {
 
     document.getElementById('cerrar-modal').onclick = cerrarModal;
     document.getElementById('cancelar-cliente').onclick = cerrarModal;
+    // Cerrar con clic fuera
+    modal.onclick = (e) => { if (e.target === modal) cerrarModal(); };
+    // Cerrar con Escape
+    const onKey = (e) => { if (e.key === 'Escape') cerrarModal(); };
+    document.addEventListener('keydown', onKey, { once: true });
     
     document.getElementById('cliente-form').onsubmit = async (e) => {
       e.preventDefault();

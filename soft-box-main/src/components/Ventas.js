@@ -8,6 +8,9 @@ export async function renderVentas(container, usuario_id) {
   let metodoPago = 'efectivo';
   let descuento = 0;
   let plazoCheque = 30;
+  let ventasRecientes = [];
+  let productosFrecuentes = [];
+  let modoRapido = false;
 
   container.innerHTML = `
     <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
@@ -60,8 +63,8 @@ export async function renderVentas(container, usuario_id) {
           <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm font-medium text-gray-600">Ventas Mes</p>
-                <p class="text-2xl font-bold text-blue-600" id="ventas-mes">0</p>
+                <p class="text-sm font-medium text-gray-600">Promedio Venta</p>
+                <p class="text-2xl font-bold text-indigo-600" id="promedio-venta">$0.00</p>
               </div>
               <div class="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,14 +77,36 @@ export async function renderVentas(container, usuario_id) {
           <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm font-medium text-gray-600">Ingresos Mes</p>
-                <p class="text-2xl font-bold text-purple-600" id="ingresos-mes">$0.00</p>
+                <p class="text-sm font-medium text-gray-600">Productos Vendidos</p>
+                <p class="text-2xl font-bold text-purple-600" id="productos-vendidos">0</p>
               </div>
               <div class="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                 </svg>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modo Rápido Toggle -->
+        <div class="mb-6">
+          <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-white/20">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg">
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800">Modo Rápido</h3>
+                  <p class="text-sm text-gray-600">Ventas express para clientes frecuentes</p>
+                </div>
+              </div>
+              <button id="toggle-modo-rapido" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2" role="switch" aria-checked="false">
+                <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+              </button>
             </div>
           </div>
         </div>
@@ -91,13 +116,29 @@ export async function renderVentas(container, usuario_id) {
           <!-- Nueva Venta -->
           <div class="xl:col-span-2">
             <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-              <div class="flex items-center gap-3 mb-6">
-                <div class="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
-                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                  </svg>
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <div class="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                  </div>
+                  <h2 class="text-2xl font-bold text-gray-800">Nueva Venta</h2>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-800">Nueva Venta</h2>
+                <div class="flex gap-2">
+                  <button id="limpiar-carrito" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Limpiar
+                  </button>
+                  <button id="duplicar-venta" class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                    Duplicar
+                  </button>
+                </div>
               </div>
 
               <form id="ventas-form" class="space-y-6">
@@ -105,9 +146,16 @@ export async function renderVentas(container, usuario_id) {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
-                    <select id="select-cliente" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm">
-                      <option value="">Seleccionar cliente</option>
-                    </select>
+                    <div class="flex gap-2">
+                      <select id="select-cliente" class="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm">
+                        <option value="">Seleccionar cliente</option>
+                      </select>
+                      <button type="button" id="nuevo-cliente-rapido" class="px-3 py-3 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Producto</label>
@@ -122,6 +170,14 @@ export async function renderVentas(container, usuario_id) {
                         Agregar
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                <!-- Productos Frecuentes (Modo Rápido) -->
+                <div id="productos-frecuentes" class="hidden">
+                  <label class="block text-sm font-medium text-gray-700 mb-3">Productos Frecuentes</label>
+                  <div id="lista-productos-frecuentes" class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <!-- Se llenará dinámicamente -->
                   </div>
                 </div>
 
@@ -356,7 +412,7 @@ export async function renderVentas(container, usuario_id) {
       return;
     }
     
-    // Guardar detalle
+    // Guardar detalle y ajustar stock con control optimista
     for (const item of carrito) {
       await supabase.from('venta_detalle').insert({
         venta_id: venta.id,
@@ -365,11 +421,13 @@ export async function renderVentas(container, usuario_id) {
         precio_unitario: item.precio_unitario,
         subtotal: item.precio_unitario * item.cantidad
       });
-      
-      // Actualizar stock
-      const { data: prod } = await supabase.from('productos').select('stock').eq('id', item.id).single();
-      const nuevoStock = (prod?.stock || 0) - item.cantidad;
-      await supabase.from('productos').update({ stock: nuevoStock }).eq('id', item.id);
+
+      const ok = await ajustarStockOptimista(item.id, -item.cantidad);
+      if (!ok) {
+        errorDiv.textContent = 'Conflicto al actualizar stock. Intenta nuevamente.';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
     }
     
     okDiv.textContent = '¡Venta registrada exitosamente!';
@@ -398,20 +456,53 @@ export async function renderVentas(container, usuario_id) {
     const ventasHoyCount = ventasHoy?.length || 0;
     const ingresosHoy = ventasHoy?.reduce((acc, v) => acc + (v.total || 0), 0) || 0;
     
-    // Ventas e ingresos del mes
-    const { data: ventasMes } = await supabase
+    // Productos vendidos hoy
+    const { data: productosHoy } = await supabase
+      .from('venta_detalle')
+      .select('cantidad')
+      .gte('created_at', hoy);
+    
+    const productosVendidosHoy = productosHoy?.reduce((acc, p) => acc + (p.cantidad || 0), 0) || 0;
+    
+    // Promedio de venta (últimos 7 días)
+    const hace7Dias = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const { data: ventas7Dias } = await supabase
       .from('ventas')
       .select('total')
-      .gte('created_at', inicioMes)
-      .lte('created_at', finMes);
+      .gte('created_at', hace7Dias);
     
-    const ventasMesCount = ventasMes?.length || 0;
-    const ingresosMes = ventasMes?.reduce((acc, v) => acc + (v.total || 0), 0) || 0;
+    const promedioVenta = ventas7Dias && ventas7Dias.length > 0 
+      ? ventas7Dias.reduce((acc, v) => acc + (v.total || 0), 0) / ventas7Dias.length 
+      : 0;
     
     document.getElementById('ventas-hoy').textContent = ventasHoyCount;
     document.getElementById('ingresos-hoy').textContent = `$${ingresosHoy.toFixed(2)}`;
-    document.getElementById('ventas-mes').textContent = ventasMesCount;
-    document.getElementById('ingresos-mes').textContent = `$${ingresosMes.toFixed(2)}`;
+    document.getElementById('promedio-venta').textContent = `$${promedioVenta.toFixed(2)}`;
+    document.getElementById('productos-vendidos').textContent = productosVendidosHoy;
+  }
+
+  // Ajuste de stock con control optimista (sin RPC)
+  async function ajustarStockOptimista(productoId, delta, reintentos = 5) {
+    for (let i = 0; i < reintentos; i++) {
+      const { data: prod, error: errSel } = await supabase
+        .from('productos')
+        .select('stock')
+        .eq('id', productoId)
+        .single();
+      if (errSel) return false;
+      const stockActual = prod?.stock ?? 0;
+      const nuevoStock = stockActual + delta;
+      if (nuevoStock < 0) return false;
+      const { data: upd, error: errUpd } = await supabase
+        .from('productos')
+        .update({ stock: nuevoStock })
+        .eq('id', productoId)
+        .eq('stock', stockActual)
+        .select();
+      if (!errUpd && upd && upd.length) return true;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    return false;
   }
 
   async function cargarHistorialVentas(filtroCliente = '') {
@@ -434,6 +525,9 @@ export async function renderVentas(container, usuario_id) {
     }
     
     const { data, error } = await query;
+    
+    // Guardar ventas recientes para duplicación
+    ventasRecientes = data || [];
     
     if (error) {
       historialDiv.innerHTML = `
@@ -528,14 +622,286 @@ export async function renderVentas(container, usuario_id) {
     }
   }
 
+  /**
+   * Configura todos los event listeners adicionales
+   */
+  function setupEventListeners() {
+    // Toggle modo rápido
+    const toggleBtn = document.getElementById('toggle-modo-rapido');
+    toggleBtn.addEventListener('click', () => {
+      modoRapido = !modoRapido;
+      toggleBtn.classList.toggle('bg-orange-500', modoRapido);
+      toggleBtn.classList.toggle('bg-gray-200', !modoRapido);
+      toggleBtn.querySelector('span').classList.toggle('translate-x-5', modoRapido);
+      toggleBtn.querySelector('span').classList.toggle('translate-x-1', !modoRapido);
+      toggleBtn.setAttribute('aria-checked', modoRapido);
+      
+      const productosFrecuentes = document.getElementById('productos-frecuentes');
+      productosFrecuentes.classList.toggle('hidden', !modoRapido);
+    });
+
+    // Limpiar carrito
+    document.getElementById('limpiar-carrito').addEventListener('click', () => {
+      carrito = [];
+      renderCarrito();
+      calcularTotal();
+    });
+
+    // Duplicar venta
+    document.getElementById('duplicar-venta').addEventListener('click', () => {
+      if (ventasRecientes.length > 0) {
+        mostrarModalDuplicarVenta();
+      } else {
+        alert('No hay ventas recientes para duplicar');
+      }
+    });
+
+    // Nuevo cliente rápido
+    document.getElementById('nuevo-cliente-rapido').addEventListener('click', () => {
+      mostrarModalNuevoCliente();
+    });
+  }
+
+  /**
+   * Carga los productos más frecuentemente vendidos
+   */
+  async function cargarProductosFrecuentes() {
+    const { data: detalles } = await supabase
+      .from('venta_detalle')
+      .select('producto_id, cantidad, productos(nombre, precio_calculado)')
+      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()); // Últimos 30 días
+
+    if (!detalles) return;
+
+    const productosMap = {};
+    detalles.forEach(d => {
+      if (!productosMap[d.producto_id]) {
+        productosMap[d.producto_id] = {
+          id: d.producto_id,
+          nombre: d.productos?.nombre || 'Sin nombre',
+          precio: d.productos?.precio_calculado || 0,
+          cantidad: 0
+        };
+      }
+      productosMap[d.producto_id].cantidad += d.cantidad;
+    });
+
+    productosFrecuentes = Object.values(productosMap)
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 8);
+
+    renderProductosFrecuentes();
+  }
+
+  /**
+   * Renderiza los productos frecuentes
+   */
+  function renderProductosFrecuentes() {
+    const container = document.getElementById('lista-productos-frecuentes');
+    if (!container) return;
+
+    container.innerHTML = productosFrecuentes.map(p => `
+      <button 
+        class="producto-frecuente p-3 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg hover:from-blue-100 hover:to-indigo-100 transition-all duration-200 text-left"
+        data-producto-id="${p.id}"
+      >
+        <div class="font-medium text-gray-800 text-sm mb-1">${p.nombre}</div>
+        <div class="text-xs text-gray-600">$${p.precio.toFixed(2)}</div>
+      </button>
+    `).join('');
+
+    // Event listeners para productos frecuentes
+    container.querySelectorAll('.producto-frecuente').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const productoId = btn.dataset.productoId;
+        const producto = productos.find(p => p.id === productoId);
+        if (producto) {
+          agregarProductoAlCarrito(producto);
+        }
+      });
+    });
+  }
+
+  /**
+   * Agrega un producto al carrito
+   */
+  function agregarProductoAlCarrito(producto) {
+    const idx = carrito.findIndex(i => i.id === producto.id);
+    if (idx >= 0) {
+      carrito[idx].cantidad += 1;
+    } else {
+      carrito.push({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio_unitario: producto.precio_calculado,
+        cantidad: 1
+      });
+    }
+    renderCarrito();
+    calcularTotal();
+  }
+
+  /**
+   * Muestra modal para duplicar venta
+   */
+  function mostrarModalDuplicarVenta() {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-gray-800">Duplicar Venta Reciente</h3>
+          <button class="text-gray-400 hover:text-gray-600" onclick="this.closest('.fixed').remove()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="space-y-2 max-h-64 overflow-y-auto">
+          ${ventasRecientes.map(v => `
+            <button 
+              class="w-full p-3 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              onclick="duplicarVenta('${v.id}'); this.closest('.fixed').remove()"
+            >
+              <div class="flex justify-between items-center">
+                <div>
+                  <p class="font-medium text-gray-800">${v.clientes?.nombre || 'Sin cliente'}</p>
+                  <p class="text-sm text-gray-500">${new Date(v.created_at).toLocaleString('es-AR')}</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-bold text-green-600">$${v.total?.toFixed(2)}</p>
+                  <p class="text-xs text-gray-500">${v.metodo_pago}</p>
+                </div>
+              </div>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  }
+
+  /**
+   * Duplica una venta específica
+   */
+  async function duplicarVenta(ventaId) {
+    const { data: detalles } = await supabase
+      .from('venta_detalle')
+      .select('*, productos(nombre, precio_calculado)')
+      .eq('venta_id', ventaId);
+
+    if (detalles && detalles.length > 0) {
+      carrito = detalles.map(d => ({
+        id: d.producto_id,
+        nombre: d.productos?.nombre || 'Sin nombre',
+        precio_unitario: d.productos?.precio_calculado || 0,
+        cantidad: d.cantidad
+      }));
+      renderCarrito();
+      calcularTotal();
+    }
+  }
+
+  /**
+   * Muestra modal para nuevo cliente rápido
+   */
+  function mostrarModalNuevoCliente() {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-gray-800">Nuevo Cliente Rápido</h3>
+          <button class="text-gray-400 hover:text-gray-600" onclick="this.closest('.fixed').remove()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <form id="form-cliente-rapido" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+            <input type="text" id="nombre-cliente-rapido" required class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+            <input type="tel" id="telefono-cliente-rapido" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          </div>
+          <div class="flex gap-2 pt-4">
+            <button type="button" onclick="this.closest('.fixed').remove()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              Crear Cliente
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Event listener para el formulario
+    document.getElementById('form-cliente-rapido').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await crearClienteRapido();
+    });
+  }
+
+  /**
+   * Crea un cliente rápidamente
+   */
+  async function crearClienteRapido() {
+    const nombre = document.getElementById('nombre-cliente-rapido').value;
+    const telefono = document.getElementById('telefono-cliente-rapido').value;
+
+    const { data: nuevoCliente, error } = await supabase
+      .from('clientes')
+      .insert([{ nombre, telefono }])
+      .select()
+      .single();
+
+    if (error) {
+      alert('Error al crear cliente: ' + error.message);
+      return;
+    }
+
+    // Agregar a la lista de clientes
+    clientes.push(nuevoCliente);
+    
+    // Actualizar select
+    const select = document.getElementById('select-cliente');
+    select.innerHTML = '<option value="">Seleccionar cliente</option>' + clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+    
+    // Seleccionar el nuevo cliente
+    select.value = nuevoCliente.id;
+    clienteSeleccionado = nuevoCliente.id;
+
+    // Cerrar modal
+    document.querySelector('.fixed').remove();
+  }
+
   // Inicialización
   await cargarClientes();
   await cargarProductos();
   await cargarEstadisticas();
   await cargarHistorialVentas();
+  await cargarProductosFrecuentes();
   renderCarrito();
   calcularTotal();
 
   // Event listeners
   document.getElementById('buscar-venta-cliente').oninput = (e) => cargarHistorialVentas(e.target.value);
+  
+  // Nuevos event listeners
+  setupEventListeners();
+
+  // Cerrar overlays con Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const overlays = document.querySelectorAll('.fixed.inset-0');
+      overlays.forEach((o) => o.classList.add('hidden'));
+    }
+  });
 } 

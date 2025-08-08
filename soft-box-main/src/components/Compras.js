@@ -311,7 +311,7 @@ export async function renderCompras(container, usuario_id) {
       return;
     }
     
-    // Guardar detalle
+    // Guardar detalle y ajustar stock con control optimista
     for (const item of carrito) {
       await supabase.from('compra_detalle').insert({
         compra_id: compra.id,
@@ -320,9 +320,13 @@ export async function renderCompras(container, usuario_id) {
         precio_unitario: item.costo_unitario,
         subtotal: item.costo_unitario * item.cantidad
       });
-      
-      // Actualizar stock
-      await supabase.from('productos').update({ stock: supabase.literal('stock + ' + item.cantidad) }).eq('id', item.id);
+
+      const ok = await ajustarStockOptimista(item.id, item.cantidad);
+      if (!ok) {
+        errorDiv.textContent = 'Conflicto al actualizar stock. Intenta nuevamente.';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
     }
     
     okDiv.textContent = '¡Compra registrada exitosamente!';
@@ -336,6 +340,29 @@ export async function renderCompras(container, usuario_id) {
     cargarEstadisticas();
     cargarHistorialCompras();
   };
+
+  // Ajuste de stock con control optimista (sin RPC)
+  async function ajustarStockOptimista(productoId, delta, reintentos = 5) {
+    for (let i = 0; i < reintentos; i++) {
+      const { data: prod, error: errSel } = await supabase
+        .from('productos')
+        .select('stock')
+        .eq('id', productoId)
+        .single();
+      if (errSel) return false;
+      const stockActual = prod?.stock ?? 0;
+      const nuevoStock = stockActual + delta;
+      const { data: upd, error: errUpd } = await supabase
+        .from('productos')
+        .update({ stock: nuevoStock })
+        .eq('id', productoId)
+        .eq('stock', stockActual)
+        .select();
+      if (!errUpd && upd && upd.length) return true;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    return false;
+  }
 
   async function cargarEstadisticas() {
     const hoy = new Date().toISOString().slice(0, 10);
@@ -491,4 +518,12 @@ export async function renderCompras(container, usuario_id) {
 
   // Event listeners
   document.getElementById('buscar-compra-proveedor').oninput = (e) => cargarHistorialCompras(e.target.value);
+
+  // Cerrar modales con Escape (no hay modal propio, pero sí podemos cerrar posibles overlays)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const overlays = document.querySelectorAll('.fixed.inset-0');
+      overlays.forEach((o) => o.classList.add('hidden'));
+    }
+  });
 } 

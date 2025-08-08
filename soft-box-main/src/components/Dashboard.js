@@ -206,28 +206,85 @@ export async function renderDashboard(container) {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Stock Bajo Details -->
           <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                </svg>
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg">
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                  </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-800">Productos con Stock Bajo</h3>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800">Productos con Stock Bajo</h3>
+              <button id="refresh-stock" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+              </button>
             </div>
             <div id="stock-bajo" class="space-y-3"></div>
           </div>
 
           <!-- Próximos Turnos -->
           <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="p-2 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg">
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-800">Próximos Turnos (3 días)</h3>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800">Próximos Turnos (3 días)</h3>
+              <button id="refresh-turnos" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+              </button>
             </div>
             <div id="proximos-turnos" class="space-y-3"></div>
+          </div>
+        </div>
+
+        <!-- Acciones Diarias -->
+        <div class="mt-8">
+          <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800">Acciones Diarias</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <button id="daily-nueva-venta" class="daily-action-btn bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                <span class="font-semibold">Nueva Venta</span>
+              </button>
+              
+              <button id="daily-nuevo-turno" class="daily-action-btn bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span class="font-semibold">Nuevo Turno</span>
+              </button>
+              
+              <button id="daily-nuevo-cliente" class="daily-action-btn bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                </svg>
+                <span class="font-semibold">Nuevo Cliente</span>
+              </button>
+              
+              <button id="daily-reporte" class="daily-action-btn bg-gradient-to-br from-gray-600 to-gray-800 text-white">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <span class="font-semibold">Reporte Diario</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -239,6 +296,9 @@ export async function renderDashboard(container) {
   await cargarAnalytics();
   await cargarStockBajo();
   await cargarProximosTurnos();
+  
+  // Configurar eventos para acciones diarias
+  setupDailyActions();
 }
 
 async function cargarEstadisticasPrincipales() {
@@ -552,5 +612,119 @@ async function cargarProximosTurnos() {
         <p class="text-gray-400 text-sm">Los próximos 3 días están libres</p>
       </div>
     `;
+  }
+}
+
+/**
+ * Configura los eventos para las acciones diarias del dashboard
+ */
+function setupDailyActions() {
+  // Botones de refresh
+  const refreshStock = document.getElementById('refresh-stock');
+  const refreshTurnos = document.getElementById('refresh-turnos');
+  
+  if (refreshStock) {
+    refreshStock.addEventListener('click', async () => {
+      refreshStock.classList.add('animate-spin');
+      await cargarStockBajo();
+      setTimeout(() => refreshStock.classList.remove('animate-spin'), 1000);
+    });
+  }
+  
+  if (refreshTurnos) {
+    refreshTurnos.addEventListener('click', async () => {
+      refreshTurnos.classList.add('animate-spin');
+      await cargarProximosTurnos();
+      setTimeout(() => refreshTurnos.classList.remove('animate-spin'), 1000);
+    });
+  }
+
+  // Acciones diarias
+  const dailyActions = {
+    'daily-nueva-venta': () => navigateToSection('#ventas'),
+    'daily-nuevo-turno': () => navigateToSection('#turnos'),
+    'daily-nuevo-cliente': () => navigateToSection('#clientes'),
+    'daily-reporte': () => generateDailyReport()
+  };
+
+  Object.entries(dailyActions).forEach(([id, action]) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener('click', action);
+    }
+  });
+}
+
+/**
+ * Navega a una sección específica
+ */
+function navigateToSection(hash) {
+  const link = document.querySelector(`a[href="${hash}"]`);
+  if (link) {
+    link.click();
+  }
+}
+
+/**
+ * Genera un reporte diario rápido
+ */
+async function generateDailyReport() {
+  const hoy = new Date().toISOString().slice(0, 10);
+  
+  try {
+    const [ventas, compras, turnos] = await Promise.all([
+      supabase.from('ventas').select('total').gte('created_at', hoy),
+      supabase.from('compras').select('total').gte('created_at', hoy),
+      supabase.from('turnos').select('estado').eq('fecha', hoy)
+    ]);
+
+    const totalVentas = ventas.data?.reduce((sum, v) => sum + (v.total || 0), 0) || 0;
+    const totalCompras = compras.data?.reduce((sum, c) => sum + (c.total || 0), 0) || 0;
+    const turnosCompletados = turnos.data?.filter(t => t.estado === 'realizado').length || 0;
+    const turnosPendientes = turnos.data?.filter(t => t.estado === 'pendiente').length || 0;
+
+    const reporte = `
+📊 REPORTE DIARIO - ${new Date().toLocaleDateString('es-AR')}
+
+💰 Ventas: $${totalVentas.toFixed(2)}
+🛒 Compras: $${totalCompras.toFixed(2)}
+💵 Ganancia: $${(totalVentas - totalCompras).toFixed(2)}
+
+📅 Turnos:
+  ✅ Completados: ${turnosCompletados}
+  ⏳ Pendientes: ${turnosPendientes}
+    `;
+
+    // Mostrar modal con reporte
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-gray-800">Reporte Diario</h3>
+          <button class="text-gray-400 hover:text-gray-600" onclick="this.closest('.fixed').remove()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4 font-mono text-sm whitespace-pre-line">
+          ${reporte}
+        </div>
+        <div class="mt-4 flex gap-2">
+          <button class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors" onclick="this.closest('.fixed').remove()">
+            Cerrar
+          </button>
+          <button class="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors" onclick="navigator.clipboard.writeText(\`${reporte}\`); this.textContent='Copiado!'; setTimeout(() => this.textContent='Copiar', 2000)">
+            Copiar
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  } catch (error) {
+    console.error('Error al generar reporte:', error);
+    alert('Error al generar el reporte diario');
   }
 } 

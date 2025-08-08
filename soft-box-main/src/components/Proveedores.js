@@ -375,9 +375,9 @@ export async function renderProveedores(container) {
   document.getElementById('cancelar-proveedor').onclick = cerrarModal;
 
   // Cerrar modal al hacer clic fuera
-  modal.onclick = (e) => {
-    if (e.target === modal) cerrarModal();
-  };
+  modal.onclick = (e) => { if (e.target === modal) cerrarModal(); };
+  // Cerrar con Escape
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarModal(); }, { once: true });
 
   document.getElementById('proveedor-form').onsubmit = async (e) => {
     e.preventDefault();

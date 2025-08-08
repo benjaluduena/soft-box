@@ -522,6 +522,8 @@ export async function renderTurnos(container) {
   modal.onclick = (e) => {
     if (e.target === modal) cerrarModal();
   };
+  // Cerrar con Escape
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarModal(); }, { once: true });
 
   async function mostrarFormTurno(id, fechaFija) {
     let turno = { 
