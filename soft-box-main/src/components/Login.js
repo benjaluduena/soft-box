@@ -5,7 +5,7 @@ import { supabase, handleSupabaseError } from '../supabaseClient.js';
  * @param {HTMLElement} container - Contenedor donde renderizar el login
  * @param {Function} onSuccess - Callback ejecutado al login exitoso
  */
-export function renderLogin(container, onSuccess) {
+export function renderLogin(container, onSuccess, onGoToSignup) {
   container.innerHTML = `
     <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4">
       <div class="bg-white/80 backdrop-blur-xl shadow-2xl rounded-2xl p-8 w-full max-w-sm border border-white/20">
@@ -67,6 +67,19 @@ export function renderLogin(container, onSuccess) {
           <div id="login-error" class="hidden text-red-600 text-sm text-center bg-red-50 border border-red-200 rounded-lg p-3"></div>
         </form>
         
+        <!-- Enlace para crear cuenta -->
+        <div class="mt-6 text-center">
+          <p class="text-sm text-gray-600">
+            ¿No tienes una cuenta? 
+            <button 
+              id="go-to-signup"
+              class="text-blue-600 hover:text-blue-800 font-medium underline"
+            >
+              Crear cuenta
+            </button>
+          </p>
+        </div>
+        
         <!-- Footer -->
         <div class="mt-8 text-center">
           <p class="text-xs text-gray-500">
@@ -82,6 +95,7 @@ export function renderLogin(container, onSuccess) {
   const btnText = document.getElementById('btn-text');
   const btnLoading = document.getElementById('btn-loading');
   const loginBtn = document.getElementById('login-btn');
+  const goToSignupBtn = document.getElementById('go-to-signup');
 
   // Función para mostrar/ocultar estado de carga
   const setLoading = (loading) => {
@@ -176,6 +190,14 @@ export function renderLogin(container, onSuccess) {
       showError('Error de conexión. Verifica tu internet e intenta nuevamente');
     } finally {
       setLoading(false);
+    }
+  });
+
+  // Manejar botón de ir al registro
+  goToSignupBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (onGoToSignup) {
+      onGoToSignup();
     }
   });
 

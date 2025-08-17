@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient.js';
 import { renderLogin } from './components/Login.js';
+import { renderSignup } from './components/Signup.js';
 import { renderSidebar } from './components/Sidebar.js';
 import { renderClientes } from './components/Clientes.js';
 import { renderInventario } from './components/Inventario.js';
@@ -24,6 +25,7 @@ if (!app) {
 // Usuario actual para ruteo
 let currentUser = null;
 let globalShortcutsBound = false;
+let currentAuthView = 'login'; // 'login' o 'signup'
 
 /**
  * Oculta la pantalla de carga
@@ -56,7 +58,7 @@ async function checkAuth() {
     }
     
     if (!session) {
-      renderLogin(app, onLoginSuccess);
+      renderAuthView();
     } else {
       currentUser = session.user;
       renderSidebar(app, currentUser);
@@ -72,9 +74,45 @@ async function checkAuth() {
     hideLoadingScreen();
   } catch (error) {
     console.error('Error inesperado en checkAuth:', error);
-    renderLogin(app, onLoginSuccess);
+    renderAuthView();
     hideLoadingScreen();
   }
+}
+
+/**
+ * Renderiza la vista de autenticación actual (login o signup)
+ */
+function renderAuthView() {
+  if (currentAuthView === 'signup') {
+    renderSignup(app, onSignupSuccess, onBackToLogin);
+  } else {
+    renderLogin(app, onLoginSuccess, onGoToSignup);
+  }
+}
+
+/**
+ * Callback para ir al registro
+ */
+function onGoToSignup() {
+  currentAuthView = 'signup';
+  renderAuthView();
+}
+
+/**
+ * Callback para volver al login
+ */
+function onBackToLogin() {
+  currentAuthView = 'login';
+  renderAuthView();
+}
+
+/**
+ * Callback ejecutado después de un registro exitoso
+ * @param {Object} user - Usuario registrado
+ */
+function onSignupSuccess(user) {
+  // Después del registro exitoso, volver al login
+  onBackToLogin();
 }
 
 /**

@@ -80,7 +80,7 @@ export function renderSidebar(container, user) {
             </div>
             <div>
               <h1 class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                TireTask
+                BOX
               </h1>
               <p class="text-xs text-gray-500">Taller Mecánico</p>
             </div>

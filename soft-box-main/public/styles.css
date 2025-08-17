@@ -420,4 +420,98 @@ a:focus-visible {
 /* Dark mode support (futuro) */
 @media (prefers-color-scheme: dark) {
   /* Estilos para modo oscuro cuando se implemente */
+}
+
+/* Estilos para gráficos de Highcharts */
+.highcharts-container {
+  font-family: 'Inter', sans-serif !important;
+}
+
+.highcharts-title {
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+}
+
+.highcharts-axis-labels text {
+  font-size: 11px !important;
+  color: #6b7280 !important;
+}
+
+.highcharts-grid-line {
+  stroke: #f3f4f6 !important;
+  stroke-width: 1 !important;
+}
+
+.highcharts-tooltip {
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.highcharts-legend-item text {
+  font-weight: 500 !important;
+  color: #374151 !important;
+}
+
+/* Animaciones para gráficos */
+.chart-container {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: chartFadeIn 0.6s ease-out forwards;
+}
+
+@keyframes chartFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive para gráficos */
+@media (max-width: 768px) {
+  .highcharts-container {
+    font-size: 10px !important;
+  }
+  
+  .highcharts-axis-labels text {
+    font-size: 9px !important;
+  }
+  
+  .highcharts-legend-item text {
+    font-size: 10px !important;
+  }
+}
+
+/* Estados de carga para gráficos */
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 320px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 12px;
+}
+
+.chart-loading::after {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Mejoras de accesibilidad para gráficos */
+.highcharts-accessible-text {
+  font-size: 12px !important;
+  color: #374151 !important;
+}
+
+/* Tooltips mejorados para gráficos */
+.highcharts-tooltip-box {
+  fill: rgba(255, 255, 255, 0.95) !important;
+  stroke: #e5e7eb !important;
+  stroke-width: 1 !important;
+  rx: 8 !important;
+  ry: 8 !important;
 } 
