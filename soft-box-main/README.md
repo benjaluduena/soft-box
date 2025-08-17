@@ -3,7 +3,7 @@
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow.svg)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Supabase](https://img.shields.io/badge/Supabase-Database-blue.svg)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC.svg)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 
 Sistema de gestión integral para talleres mecánicos y gomerías, desarrollado con tecnologías modernas y una interfaz intuitiva.
 
@@ -161,59 +161,3 @@ soft-box-main/
 - Manejo seguro de sesiones
 - CORS configurado correctamente
 
-## 🚀 Despliegue
-
-### Opciones de hosting recomendadas:
-
-1. **Vercel** (Recomendado)
-   ```bash
-   npm i -g vercel
-   vercel
-   ```
-
-2. **Netlify**
-   - Arrastra la carpeta `public` a Netlify
-   - Configura las variables de entorno
-
-3. **GitHub Pages**
-   - Sube el código a GitHub
-   - Activa GitHub Pages en la configuración del repositorio
-
-4. **Firebase Hosting**
-   ```bash
-   npm install -g firebase-tools
-   firebase init hosting
-   firebase deploy
-   ```
-
-## 🤝 Contribución
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📝 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
-
-## 🆘 Soporte
-
-Si tienes problemas o preguntas:
-
-- 📧 Email: soporte@tiretask.com
-- 💬 Discord: [Servidor de TireTask](https://discord.gg/tiretask)
-- 📖 Documentación: [docs.tiretask.com](https://docs.tiretask.com)
-- 🐛 Issues: [GitHub Issues](https://github.com/tu-usuario/tiretask/issues)
-
-## 🙏 Agradecimientos
-
-- [Supabase](https://supabase.com/) por la infraestructura backend
-- [Tailwind CSS](https://tailwindcss.com/) por el framework de estilos
-- [Heroicons](https://heroicons.com/) por los iconos
-- Comunidad de desarrolladores por el feedback y contribuciones
-
----
-
-**Desarrollado con ❤️ para talleres mecánicos** 
