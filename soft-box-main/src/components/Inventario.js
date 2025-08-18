@@ -34,7 +34,10 @@ const inventarioUtils = {
     year: 'numeric'
   }).format(new Date(fecha)),
 
-  calcularPrecioVenta: (costo, margen) => costo * (1 + margen),
+  calcularPrecioVenta: (costo, margen, margenProveedor = 0.30) => {
+    const margenFinal = margen !== null && margen !== undefined ? margen : margenProveedor;
+    return costo * (1 + margenFinal);
+  },
 
   determinarEstadoStock: (stock, minimo = 5) => {
     if (stock === 0) return 'agotado';
@@ -359,7 +362,7 @@ export async function renderInventario(container) {
   const modalContent = document.getElementById('modal-content');
 
   async function cargarProductos(filtro = '') {
-    let query = supabase.from('productos').select('*,proveedores(nombre)').order('created_at', { ascending: false });
+    let query = supabase.from('productos').select('*,proveedores(nombre,margen_ganancia)').order('created_at', { ascending: false });
     if (filtro) {
       query = query.or(`nombre.ilike.%${filtro}%,marca.ilike.%${filtro}%,tipo.ilike.%${filtro}%`);
     }
@@ -409,7 +412,8 @@ export async function renderInventario(container) {
     }
 
     listaDiv.innerHTML = data.map(prod => {
-      const precioCalculado = prod.costo * (1 + (prod.margen || 0));
+      const margenProveedor = prod.proveedores?.margen_ganancia || 0.30;
+      const precioCalculado = inventarioUtils.calcularPrecioVenta(prod.costo, prod.margen, margenProveedor);
       const stockStatus = prod.stock === 0 ? 'sin-stock' : prod.stock < 5 ? 'stock-bajo' : 'stock-ok';
       const statusColors = {
         'sin-stock': 'bg-red-50 border-red-200 text-red-800',
@@ -456,6 +460,14 @@ export async function renderInventario(container) {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                     </svg>
                     Proveedor: ${prod.proveedores.nombre}
+                    ${prod.margen === null || prod.margen === undefined ? 
+                      `<span class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full ml-2">
+                        Margen: ${((prod.proveedores.margen_ganancia || 0.30) * 100).toFixed(1)}%
+                      </span>` : 
+                      `<span class="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full ml-2">
+                        Margen custom: ${(prod.margen * 100).toFixed(1)}%
+                      </span>`
+                    }
                   </div>
                 ` : ''}
               </div>

@@ -290,7 +290,7 @@ export async function renderCompras(container, usuario_id) {
       try {
         const { data, error } = await supabase
           .from('proveedores')
-          .select('id, nombre, telefono, email')
+          .select('id, nombre, telefono, email, margen_ganancia')
           .order('nombre');
         
         if (error) throw error;
@@ -582,7 +582,8 @@ export async function renderCompras(container, usuario_id) {
       state.proveedores.forEach(proveedor => {
         const option = document.createElement('option');
         option.value = proveedor.id;
-        option.textContent = proveedor.nombre;
+        const margenTexto = proveedor.margen_ganancia ? `- ${(proveedor.margen_ganancia * 100).toFixed(1)}% margen` : '';
+        option.textContent = `${proveedor.nombre} ${margenTexto}`;
         select.appendChild(option);
       });
     },
@@ -826,6 +827,7 @@ export async function renderCompras(container, usuario_id) {
             <div>
               <p class="font-medium text-gray-800">${proveedor.nombre}</p>
               <p class="text-sm text-gray-600">${proveedor.telefono || 'Sin teléfono'}</p>
+              ${proveedor.margen_ganancia ? `<p class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full inline-block mt-1">Margen: ${(proveedor.margen_ganancia * 100).toFixed(1)}%</p>` : ''}
             </div>
             <div class="text-right">
               <p class="text-xs text-purple-600">Click para seleccionar</p>
