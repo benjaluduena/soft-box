@@ -1,10 +1,66 @@
 import { supabase } from '../supabaseClient.js';
 
 export async function renderCompras(container, usuario_id) {
-  let carrito = [];
-  let proveedores = [];
-  let productos = [];
-  let proveedorSeleccionado = null;
+  // Estado centralizado de la aplicación
+  const state = {
+    carrito: [],
+    proveedores: [],
+    productos: [],
+    proveedorSeleccionado: null,
+    metodoPago: 'efectivo',
+    descuento: 0,
+    busquedaProductos: '',
+    comprasRecientes: [],
+    paginaActual: 1,
+    productosPorPagina: 20,
+    filtroFecha: 'mes'
+  };
+
+  // Utilidades
+  const utils = {
+    formatCurrency: (amount) => new Intl.NumberFormat('es-AR', { 
+      style: 'currency', 
+      currency: 'ARS' 
+    }).format(amount || 0),
+    
+    formatDate: (date) => new Intl.DateTimeFormat('es-AR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(date)),
+    
+    generateId: () => crypto.randomUUID(),
+    
+    showNotification: (message, type = 'success') => {
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'warning' ? 'bg-yellow-500 text-black' :
+        'bg-blue-500 text-white'
+      }`;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+    },
+    
+    debounce: (func, wait) => {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+  };
 
   container.innerHTML = `
     <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
@@ -84,9 +140,9 @@ export async function renderCompras(container, usuario_id) {
         </div>
 
         <!-- Main Content -->
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <!-- Nueva Compra -->
-          <div class="xl:col-span-2">
+          <div class="lg:col-span-3 order-1">
             <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
               <div class="flex items-center gap-3 mb-6">
                 <div class="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
@@ -108,18 +164,20 @@ export async function renderCompras(container, usuario_id) {
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Producto</label>
-                    <div class="flex gap-2">
-                      <select id="select-producto" class="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm">
-                        <option value="">Seleccionar producto</option>
-                      </select>
-                      <button type="button" id="agregar-producto" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold px-4 py-3 rounded-xl transition-all duration-300 flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Agregar
-                      </button>
-                    </div>
+                    <select id="select-producto" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm">
+                      <option value="">Seleccionar producto</option>
+                    </select>
                   </div>
+                </div>
+
+                <!-- Botón Agregar -->
+                <div class="mt-4">
+                  <button type="button" id="agregar-producto" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    <span class="text-lg">Agregar al Carrito</span>
+                  </button>
                 </div>
 
                 <!-- Carrito -->
@@ -139,391 +197,907 @@ export async function renderCompras(container, usuario_id) {
                   </button>
                 </div>
 
-                <!-- Mensajes -->
-                <div id="compra-error" class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm hidden"></div>
-                <div id="compra-ok" class="p-3 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm hidden"></div>
               </form>
             </div>
           </div>
 
-          <!-- Historial de Compras -->
-          <div class="xl:col-span-1">
-            <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-              <div class="flex items-center gap-3 mb-6">
-                <div class="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg">
-                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                  </svg>
+          <!-- Panel lateral -->
+          <div class="lg:col-span-1 order-2 space-y-6">
+            <!-- Historial de compras -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30">
+              <div class="p-4 border-b border-gray-100">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-lg font-semibold text-gray-800">Historial Reciente</h3>
+                  <button id="ver-todo-historial" class="text-sm text-purple-600 hover:text-purple-800">Ver todo</button>
                 </div>
-                <h3 class="text-xl font-bold text-gray-800">Historial Reciente</h3>
               </div>
               
-              <div class="relative mb-4">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
+              <div class="p-4">
+                <div class="relative mb-4">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </div>
+                  <input id="buscar-compra-proveedor" type="text" placeholder="Buscar por proveedor..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm text-sm" />
                 </div>
-                <input id="buscar-compra-proveedor" type="text" placeholder="Buscar por proveedor..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm text-sm" />
+                
+                <div id="compras-lista-historial" class="space-y-3 max-h-80 overflow-y-auto"></div>
               </div>
-              
-              <div id="compras-lista-historial" class="space-y-3 max-h-96 overflow-y-auto"></div>
+            </div>
+
+            <!-- Productos más comprados -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30">
+              <div class="p-4 border-b border-gray-100">
+                <h3 class="text-lg font-semibold text-gray-800">Más Comprados</h3>
+              </div>
+              <div id="productos-frecuentes" class="p-4 max-h-64 overflow-y-auto">
+                <!-- Se llena dinámicamente -->
+              </div>
+            </div>
+
+            <!-- Proveedores principales -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30">
+              <div class="p-4 border-b border-gray-100">
+                <h3 class="text-lg font-semibold text-gray-800">Proveedores Principales</h3>
+              </div>
+              <div id="proveedores-principales" class="p-4 max-h-64 overflow-y-auto">
+                <!-- Se llena dinámicamente -->
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  `;
 
-  async function cargarProveedores() {
-    const { data } = await supabase.from('proveedores').select('id,nombre').order('nombre');
-    proveedores = data || [];
-    const select = document.getElementById('select-proveedor');
-    select.innerHTML = '<option value="">Seleccionar proveedor</option>' + proveedores.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-    select.onchange = () => {
-      proveedorSeleccionado = select.value;
-    };
-  }
-
-  async function cargarProductos() {
-    const { data } = await supabase.from('productos').select('*').order('nombre');
-    productos = data || [];
-    const select = document.getElementById('select-producto');
-    select.innerHTML = '<option value="">Seleccionar producto</option>' + productos.map(p => `<option value="${p.id}">${p.nombre} ($${p.costo?.toFixed(2)})</option>`).join('');
-  }
-
-  function renderCarrito() {
-    const div = document.getElementById('carrito-lista');
-    if (!carrito.length) {
-      div.innerHTML = `
-        <div class="text-center py-8">
-          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-            </svg>
+    <!-- Modales -->
+    <div id="modal-nuevo-proveedor" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+      <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Nuevo Proveedor</h3>
+        <form id="form-nuevo-proveedor" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+            <input type="text" id="nombre-proveedor" required class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
           </div>
-          <p class="text-gray-500 font-medium">Carrito vacío</p>
-          <p class="text-gray-400 text-sm">Agrega productos para comenzar</p>
-        </div>
-      `;
-      return;
-    }
-    
-    div.innerHTML = carrito.map((item, i) => `
-      <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <h4 class="font-semibold text-gray-800">${item.nombre}</h4>
-            <p class="text-sm text-gray-500">$${item.costo_unitario.toFixed(2)} c/u</p>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+            <input type="tel" id="telefono-proveedor" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
           </div>
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2">
-              <label class="text-sm text-gray-600">Cant:</label>
-              <input type="number" min="1" value="${item.cantidad}" data-idx="${i}" class="input-cantidad w-16 px-2 py-1 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center" />
-            </div>
-            <div class="text-right">
-              <p class="font-semibold text-gray-800">$${(item.costo_unitario * item.cantidad).toFixed(2)}</p>
-            </div>
-            <button data-idx="${i}" class="eliminar-item p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-              </svg>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" id="email-proveedor" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+            <textarea id="direccion-proveedor" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button type="button" id="cancelar-proveedor" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+              Guardar
             </button>
           </div>
-        </div>
+        </form>
       </div>
-    `).join('');
-    
-    div.querySelectorAll('.input-cantidad').forEach(input => {
-      input.onchange = (e) => {
-        const idx = parseInt(input.dataset.idx);
-        carrito[idx].cantidad = parseInt(input.value);
-        renderCarrito();
-        calcularTotal();
-      };
-    });
-    div.querySelectorAll('.eliminar-item').forEach(btn => {
-      btn.onclick = () => {
-        carrito.splice(parseInt(btn.dataset.idx), 1);
-        renderCarrito();
-        calcularTotal();
-      };
-    });
-  }
+    </div>
+  `;
 
-  function calcularTotal() {
-    let total = carrito.reduce((acc, item) => acc + item.costo_unitario * item.cantidad, 0);
-    document.getElementById('total-compra').textContent = total.toFixed(2);
-    return total;
-  }
+  // API y funciones de datos
+  const api = {
+    async cargarProveedores() {
+      try {
+        const { data, error } = await supabase
+          .from('proveedores')
+          .select('id, nombre, telefono, email')
+          .order('nombre');
+        
+        if (error) throw error;
+        state.proveedores = data || [];
+      } catch (error) {
+        console.error('Error cargando proveedores:', error);
+        utils.showNotification('Error al cargar proveedores', 'error');
+      }
+    },
 
-  document.getElementById('agregar-producto').onclick = () => {
-    const prodId = document.getElementById('select-producto').value;
-    if (!prodId) return;
-    const prod = productos.find(p => p.id === prodId);
-    if (!prod) return;
-    const idx = carrito.findIndex(i => i.id === prodId);
-    if (idx >= 0) {
-      carrito[idx].cantidad += 1;
-    } else {
-      carrito.push({
-        id: prod.id,
-        nombre: prod.nombre,
-        costo_unitario: prod.costo,
-        cantidad: 1
-      });
-    }
-    renderCarrito();
-    calcularTotal();
-  };
+    async cargarProductos() {
+      try {
+        const { data, error } = await supabase
+          .from('productos')
+          .select('*')
+          .order('nombre');
+        
+        if (error) throw error;
+        state.productos = data || [];
+      } catch (error) {
+        console.error('Error cargando productos:', error);
+        utils.showNotification('Error al cargar productos', 'error');
+      }
+    },
 
-  document.getElementById('confirmar-compra').onclick = async () => {
-    const errorDiv = document.getElementById('compra-error');
-    const okDiv = document.getElementById('compra-ok');
-    errorDiv.textContent = '';
-    errorDiv.classList.add('hidden');
-    okDiv.textContent = '';
-    okDiv.classList.add('hidden');
-    
-    if (!proveedorSeleccionado) {
-      errorDiv.textContent = 'Selecciona un proveedor.';
-      errorDiv.classList.remove('hidden');
-      return;
-    }
-    if (!carrito.length) {
-      errorDiv.textContent = 'El carrito está vacío.';
-      errorDiv.classList.remove('hidden');
-      return;
-    }
-    
-    const total = calcularTotal();
-    
-    // Guardar compra
-    const { data: compra, error } = await supabase.from('compras').insert([{
-      proveedor_id: proveedorSeleccionado,
-      usuario_id,
-      total
-    }]).select().single();
-    
-    if (error) {
-      errorDiv.textContent = error.message;
-      errorDiv.classList.remove('hidden');
-      return;
-    }
-    
-    // Guardar detalle y ajustar stock con control optimista
-    for (const item of carrito) {
-      await supabase.from('compra_detalle').insert({
-        compra_id: compra.id,
-        producto_id: item.id,
-        cantidad: item.cantidad,
-        precio_unitario: item.costo_unitario,
-        subtotal: item.costo_unitario * item.cantidad
-      });
+    async cargarEstadisticas() {
+      try {
+        const hoy = new Date().toISOString().split('T')[0];
+        const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+        const finMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+        
+        // Compras e gastos de hoy
+        const { data: comprasHoy } = await supabase
+          .from('compras')
+          .select('total')
+          .gte('created_at', hoy + 'T00:00:00.000Z')
+          .lt('created_at', hoy + 'T23:59:59.999Z');
+        
+        const comprasHoyCount = comprasHoy?.length || 0;
+        const gastosHoy = comprasHoy?.reduce((acc, c) => acc + (c.total || 0), 0) || 0;
+        
+        // Compras e gastos del mes
+        const { data: comprasMes } = await supabase
+          .from('compras')
+          .select('total')
+          .gte('created_at', inicioMes + 'T00:00:00.000Z')
+          .lte('created_at', finMes + 'T23:59:59.999Z');
+        
+        const comprasMesCount = comprasMes?.length || 0;
+        const gastosMes = comprasMes?.reduce((acc, c) => acc + (c.total || 0), 0) || 0;
+        
+        document.getElementById('compras-hoy').textContent = comprasHoyCount;
+        document.getElementById('gastos-hoy').textContent = utils.formatCurrency(gastosHoy);
+        document.getElementById('compras-mes').textContent = comprasMesCount;
+        document.getElementById('gastos-mes').textContent = utils.formatCurrency(gastosMes);
+        
+      } catch (error) {
+        console.error('Error cargando estadísticas:', error);
+      }
+    },
 
-      const ok = await ajustarStockOptimista(item.id, item.cantidad);
-      if (!ok) {
-        errorDiv.textContent = 'Conflicto al actualizar stock. Intenta nuevamente.';
-        errorDiv.classList.remove('hidden');
+    async cargarHistorialCompras(filtroProveedor = '') {
+      try {
+        const historialDiv = document.getElementById('compras-lista-historial');
+        const year = new Date().getFullYear();
+        const month = new Date().getMonth();
+        const desde = new Date(year, month, 1).toISOString().split('T')[0];
+        const hasta = new Date(year, month + 1, 0).toISOString().split('T')[0];
+        
+        let query = supabase
+          .from('compras')
+          .select('*, proveedores(nombre)')
+          .gte('created_at', desde + 'T00:00:00.000Z')
+          .lte('created_at', hasta + 'T23:59:59.999Z')
+          .order('created_at', { ascending: false })
+          .limit(10);
+          
+        if (filtroProveedor) {
+          query = query.ilike('proveedores.nombre', `%${filtroProveedor}%`);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        state.comprasRecientes = data || [];
+        ui.actualizarHistorialCompras();
+      } catch (error) {
+        console.error('Error cargando historial:', error);
+      }
+    },
+
+    async crearProveedor(datosProveedor) {
+      try {
+        const { data, error } = await supabase
+          .from('proveedores')
+          .insert([datosProveedor])
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        state.proveedores.push(data);
+        ui.actualizarSelectProveedores();
+        utils.showNotification('Proveedor creado exitosamente', 'success');
+        
+        return data;
+      } catch (error) {
+        console.error('Error creando proveedor:', error);
+        utils.showNotification('Error al crear proveedor', 'error');
+        return null;
+      }
+    },
+
+    async crearCompra() {
+      if (state.carrito.length === 0) {
+        utils.showNotification('Agrega productos al carrito', 'warning');
         return;
       }
+
+      if (!state.proveedorSeleccionado) {
+        utils.showNotification('Selecciona un proveedor', 'warning');
+        return;
+      }
+
+      try {
+        const total = logic.calcularTotal();
+        
+        // Crear compra (sin descuento ya que no existe la columna)
+        const compraData = {
+          proveedor_id: state.proveedorSeleccionado,
+          usuario_id: usuario_id,
+          total: total
+        };
+        
+        const { data: compra, error: errorCompra } = await supabase
+          .from('compras')
+          .insert([compraData])
+          .select()
+          .single();
+
+        if (errorCompra) throw errorCompra;
+
+        // Crear detalles de compra
+        const detalles = state.carrito.map(item => ({
+          compra_id: compra.id,
+          producto_id: item.id,
+          cantidad: item.cantidad,
+          precio_unitario: parseFloat(item.costo_unitario) || 0,
+          subtotal: (item.cantidad * parseFloat(item.costo_unitario)) || 0
+        }));
+
+        const { error: errorDetalles } = await supabase
+          .from('compra_detalle')
+          .insert(detalles);
+
+        if (errorDetalles) throw errorDetalles;
+
+        // Actualizar stock
+        for (const item of state.carrito) {
+          const stockResult = await this.actualizarStock(item.id, item.cantidad);
+          if (!stockResult) {
+            console.warn(`No se pudo actualizar stock para producto ${item.id}`);
+          }
+        }
+
+        utils.showNotification('Compra procesada exitosamente', 'success');
+        logic.limpiarCarrito();
+        await api.cargarEstadisticas();
+        await api.cargarHistorialCompras();
+        await api.cargarProductos();
+
+      } catch (error) {
+        console.error('Error procesando compra:', error);
+        utils.showNotification('Error al procesar la compra: ' + error.message, 'error');
+      }
+    },
+
+    async actualizarStock(productoId, delta) {
+      try {
+        const { data: producto, error: errorGet } = await supabase
+          .from('productos')
+          .select('stock')
+          .eq('id', productoId)
+          .single();
+
+        if (errorGet) throw errorGet;
+
+        const nuevoStock = Math.max(0, producto.stock + delta);
+
+        const { error: errorUpdate } = await supabase
+          .from('productos')
+          .update({ stock: nuevoStock })
+          .eq('id', productoId);
+
+        if (errorUpdate) throw errorUpdate;
+
+        return true;
+      } catch (error) {
+        console.error('Error actualizando stock:', error);
+        return false;
+      }
     }
-    
-    okDiv.textContent = '¡Compra registrada exitosamente!';
-    okDiv.classList.remove('hidden');
-    
-    carrito = [];
-    renderCarrito();
-    calcularTotal();
-    
-    // Recargar estadísticas e historial
-    cargarEstadisticas();
-    cargarHistorialCompras();
   };
 
-  // Ajuste de stock con control optimista (sin RPC)
-  async function ajustarStockOptimista(productoId, delta, reintentos = 5) {
-    for (let i = 0; i < reintentos; i++) {
-      const { data: prod, error: errSel } = await supabase
-        .from('productos')
-        .select('stock')
-        .eq('id', productoId)
-        .single();
-      if (errSel) return false;
-      const stockActual = prod?.stock ?? 0;
-      const nuevoStock = stockActual + delta;
-      const { data: upd, error: errUpd } = await supabase
-        .from('productos')
-        .update({ stock: nuevoStock })
-        .eq('id', productoId)
-        .eq('stock', stockActual)
-        .select();
-      if (!errUpd && upd && upd.length) return true;
-      await new Promise(r => setTimeout(r, 50));
-    }
-    return false;
-  }
-
-  async function cargarEstadisticas() {
-    const hoy = new Date().toISOString().slice(0, 10);
-    const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
-    const finMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10);
-    
-    // Compras e gastos de hoy
-    const { data: comprasHoy } = await supabase
-      .from('compras')
-      .select('total')
-      .eq('created_at', hoy);
-    
-    const comprasHoyCount = comprasHoy?.length || 0;
-    const gastosHoy = comprasHoy?.reduce((acc, c) => acc + (c.total || 0), 0) || 0;
-    
-    // Compras e gastos del mes
-    const { data: comprasMes } = await supabase
-      .from('compras')
-      .select('total')
-      .gte('created_at', inicioMes)
-      .lte('created_at', finMes);
-    
-    const comprasMesCount = comprasMes?.length || 0;
-    const gastosMes = comprasMes?.reduce((acc, c) => acc + (c.total || 0), 0) || 0;
-    
-    document.getElementById('compras-hoy').textContent = comprasHoyCount;
-    document.getElementById('gastos-hoy').textContent = `$${gastosHoy.toFixed(2)}`;
-    document.getElementById('compras-mes').textContent = comprasMesCount;
-    document.getElementById('gastos-mes').textContent = `$${gastosMes.toFixed(2)}`;
-  }
-
-  async function cargarHistorialCompras(filtroProveedor = '') {
-    const historialDiv = document.getElementById('compras-lista-historial');
-    let year = new Date().getFullYear();
-    let month = new Date().getMonth();
-    let desde = new Date(year, month, 1).toISOString().slice(0, 10);
-    let hasta = new Date(year, month + 1, 0).toISOString().slice(0, 10);
-    
-    let query = supabase
-      .from('compras')
-      .select('*,proveedores(nombre)')
-      .gte('created_at', desde)
-      .lte('created_at', hasta)
-      .order('created_at', { ascending: false })
-      .limit(10);
+  // Lógica de negocio
+  const logic = {
+    agregarProducto(producto, cantidad = 1, costoUnitario = null) {
+      const itemExistente = state.carrito.find(item => item.id === producto.id);
+      const costo = costoUnitario || producto.costo || 0;
       
-    if (filtroProveedor) {
-      query = query.ilike('proveedores.nombre', `%${filtroProveedor}%`);
+      if (itemExistente) {
+        itemExistente.cantidad += cantidad;
+      } else {
+        state.carrito.push({
+          ...producto,
+          cantidad: cantidad,
+          costo_unitario: costo
+        });
+      }
+
+      ui.actualizarCarrito();
+      utils.showNotification('Producto agregado al carrito', 'success');
+    },
+
+    eliminarProducto(productoId) {
+      state.carrito = state.carrito.filter(item => item.id !== productoId);
+      ui.actualizarCarrito();
+    },
+
+    modificarCantidad(productoId, nuevaCantidad) {
+      const item = state.carrito.find(item => item.id === productoId);
+      if (!item) return;
+
+      if (nuevaCantidad <= 0) {
+        this.eliminarProducto(productoId);
+        return;
+      }
+
+      item.cantidad = nuevaCantidad;
+      ui.actualizarCarrito();
+    },
+
+    calcularTotal() {
+      const subtotal = state.carrito.reduce((total, item) => {
+        return total + (item.costo_unitario * item.cantidad);
+      }, 0);
+      
+      const descuentoMonto = subtotal * (state.descuento / 100);
+      return subtotal - descuentoMonto;
+    },
+
+    limpiarCarrito() {
+      state.carrito = [];
+      state.proveedorSeleccionado = null;
+      state.descuento = 0;
+      state.metodoPago = 'efectivo';
+      
+      ui.actualizarCarrito();
+      ui.actualizarInfoProveedor();
+      
+      // Solo limpiar elementos si existen
+      const selectProveedor = document.getElementById('select-proveedor');
+      const descuentoEl = document.getElementById('descuento');
+      const metodoPagoEl = document.getElementById('metodo-pago');
+      
+      if (selectProveedor) selectProveedor.value = '';
+      if (descuentoEl) descuentoEl.value = '';
+      if (metodoPagoEl) metodoPagoEl.value = 'efectivo';
+    },
+
+    buscarProductos(termino) {
+      if (!termino.trim()) return [];
+      
+      const terminoLower = termino.toLowerCase();
+      return state.productos.filter(producto => 
+        producto.nombre.toLowerCase().includes(terminoLower) ||
+        producto.tipo?.toLowerCase().includes(terminoLower) ||
+        producto.marca?.toLowerCase().includes(terminoLower)
+      ).slice(0, 10);
     }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      historialDiv.innerHTML = `
-        <div class="text-center py-4">
-          <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
-            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+  };
+
+  // Interfaz de usuario
+  const ui = {
+    actualizarSelectProveedores() {
+      const select = document.getElementById('select-proveedor');
+      select.innerHTML = '<option value="">🏢 Seleccionar proveedor...</option>';
+      
+      state.proveedores.forEach(proveedor => {
+        const option = document.createElement('option');
+        option.value = proveedor.id;
+        option.textContent = proveedor.nombre;
+        select.appendChild(option);
+      });
+    },
+
+    actualizarSelectProductos() {
+      const select = document.getElementById('select-producto');
+      select.innerHTML = '<option value="">🛍️ Seleccionar producto...</option>';
+      
+      state.productos.forEach(producto => {
+        const option = document.createElement('option');
+        option.value = producto.id;
+        option.textContent = `${producto.nombre} - ${utils.formatCurrency(producto.costo || 0)}`;
+        select.appendChild(option);
+      });
+    },
+
+    actualizarCarrito() {
+      const container = document.getElementById('carrito-lista');
+      const contadorItems = document.getElementById('items-carrito');
+      
+      if (!container) {
+        console.warn('Elemento carrito-lista no encontrado');
+        return;
+      }
+      
+      const totalItems = state.carrito.reduce((sum, item) => sum + item.cantidad, 0);
+      
+      // Solo actualizar el contador si el elemento existe
+      if (contadorItems) {
+        contadorItems.textContent = `${totalItems} productos`;
+      }
+
+      if (state.carrito.length === 0) {
+        container.innerHTML = `
+          <div class="text-center text-gray-500 py-12">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
             </svg>
+            <h4 class="text-lg font-medium text-gray-400 mb-2">Carrito vacío</h4>
+            <p class="text-gray-400">Agrega productos para comenzar tu compra</p>
           </div>
-          <p class="text-red-600 text-sm">Error al cargar historial</p>
+        `;
+      } else {
+        container.innerHTML = state.carrito.map((item, index) => `
+          <div class="bg-white rounded-xl p-4 border border-orange-200 mb-3 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                  <span class="text-orange-600 font-bold text-sm">${index + 1}</span>
+                </div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-gray-800 text-lg">${item.nombre}</h4>
+                  <p class="text-sm text-gray-600">${item.tipo || ''} ${item.marca || ''}</p>
+                  <div class="flex items-center gap-4 mt-2">
+                    <span class="text-sm text-gray-500">Costo unitario:</span>
+                    <span class="text-sm font-medium text-blue-600">${utils.formatCurrency(item.costo_unitario)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex items-center gap-4">
+                <!-- Control de cantidad -->
+                <div class="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+                  <button onclick="logic.modificarCantidad('${item.id}', ${item.cantidad - 1})" 
+                    class="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                    </svg>
+                  </button>
+                  <span class="w-12 text-center font-bold text-lg">${item.cantidad}</span>
+                  <button onclick="logic.modificarCantidad('${item.id}', ${item.cantidad + 1})" 
+                    class="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- Subtotal -->
+                <div class="text-right min-w-[100px]">
+                  <div class="text-xs text-gray-500 mb-1">Subtotal</div>
+                  <div class="text-xl font-bold text-orange-600">${utils.formatCurrency(item.costo_unitario * item.cantidad)}</div>
+                </div>
+                
+                <!-- Eliminar -->
+                <button onclick="logic.eliminarProducto('${item.id}')" 
+                  class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors ml-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Actualizar totales
+      const subtotal = state.carrito.reduce((total, item) => total + (item.costo_unitario * item.cantidad), 0);
+      const total = logic.calcularTotal();
+      
+      // Solo actualizar si los elementos existen
+      const subtotalEl = document.getElementById('subtotal-compra');
+      const totalEl = document.getElementById('total-compra');
+      
+      if (subtotalEl) {
+        subtotalEl.textContent = utils.formatCurrency(subtotal);
+      }
+      
+      if (totalEl) {
+        totalEl.textContent = utils.formatCurrency(total);
+      }
+    },
+
+    actualizarHistorialCompras() {
+      const container = document.getElementById('compras-lista-historial');
+      
+      if (state.comprasRecientes.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-500 py-4">No hay compras recientes</p>';
+        return;
+      }
+
+      container.innerHTML = state.comprasRecientes.map(compra => `
+        <div class="p-3 bg-white rounded-lg border border-gray-200 mb-2 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-gray-800">${compra.proveedores?.nombre || 'Proveedor no registrado'}</p>
+              <p class="text-sm text-gray-600">${utils.formatDate(compra.created_at)}</p>
+              <p class="text-xs text-gray-500 capitalize">${compra.metodo_pago || 'efectivo'}</p>
+            </div>
+            <div class="text-right">
+              <p class="font-bold text-purple-600">${utils.formatCurrency(compra.total)}</p>
+              <button onclick="verDetalleCompra('${compra.id}')" class="text-xs text-blue-600 hover:text-blue-800">Ver detalle</button>
+            </div>
+          </div>
         </div>
-      `;
-      return;
+      `).join('');
+    },
+
+    actualizarInfoProveedor() {
+      const infoContainer = document.getElementById('info-proveedor-seleccionado');
+      const nombreSpan = document.getElementById('nombre-proveedor-seleccionado');
+      
+      // Solo actualizar si los elementos existen
+      if (!infoContainer || !nombreSpan) {
+        return;
+      }
+      
+      if (state.proveedorSeleccionado) {
+        const proveedor = state.proveedores.find(p => p.id === state.proveedorSeleccionado);
+        if (proveedor) {
+          nombreSpan.textContent = proveedor.nombre;
+          infoContainer.classList.remove('hidden');
+        }
+      } else {
+        infoContainer.classList.add('hidden');
+      }
+    },
+
+    mostrarInfoProducto(producto) {
+      const container = document.getElementById('info-producto');
+      const costoUnitario = document.getElementById('costo-unitario');
+      
+      if (!producto) {
+        if (container) container.classList.add('hidden');
+        if (costoUnitario) costoUnitario.value = '';
+        return;
+      }
+
+      // Solo actualizar si los elementos existen
+      const stockEl = document.getElementById('stock-actual');
+      const costoSugeridoEl = document.getElementById('costo-sugerido');
+      const tipoEl = document.getElementById('tipo-producto');
+      const marcaEl = document.getElementById('marca-producto');
+      
+      if (stockEl) stockEl.textContent = producto.stock || 0;
+      if (costoSugeridoEl) costoSugeridoEl.textContent = utils.formatCurrency(producto.costo);
+      if (tipoEl) tipoEl.textContent = producto.tipo || '-';
+      if (marcaEl) marcaEl.textContent = producto.marca || '-';
+      
+      // Actualizar costo unitario en el formulario si existe
+      if (costoUnitario) {
+        costoUnitario.value = producto.costo || 0;
+        ui.actualizarSubtotalItem();
+      }
+      
+      if (container) container.classList.remove('hidden');
+    },
+
+    actualizarSubtotalItem() {
+      const cantidadEl = document.getElementById('cantidad-producto');
+      const costoEl = document.getElementById('costo-unitario');
+      const subtotalEl = document.getElementById('subtotal-item');
+      
+      if (cantidadEl && costoEl && subtotalEl) {
+        const cantidad = parseInt(cantidadEl.value) || 0;
+        const costo = parseFloat(costoEl.value) || 0;
+        const subtotal = cantidad * costo;
+        
+        subtotalEl.textContent = utils.formatCurrency(subtotal);
+      }
+    },
+
+    mostrarResultadosBusqueda(resultados) {
+      const container = document.getElementById('resultados-busqueda-producto');
+      
+      if (resultados.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.innerHTML = resultados.map(producto => `
+        <div class="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0" onclick="seleccionarProductoBusqueda('${producto.id}')">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-sm">${producto.nombre}</p>
+              <p class="text-xs text-gray-600">${producto.tipo || ''} ${producto.marca || ''}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm font-medium">${utils.formatCurrency(producto.costo)}</p>
+              <p class="text-xs text-gray-500">Stock: ${producto.stock || 0}</p>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+      container.classList.remove('hidden');
+    },
+
+    actualizarProveedoresPrincipales() {
+      const container = document.getElementById('proveedores-principales');
+      
+      if (state.proveedores.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-500 py-4">No hay proveedores registrados</p>';
+        return;
+      }
+
+      container.innerHTML = state.proveedores.slice(0, 5).map(proveedor => `
+        <div class="p-3 bg-white rounded-lg border border-gray-200 mb-2 hover:shadow-md transition-shadow cursor-pointer" onclick="seleccionarProveedor('${proveedor.id}')">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-gray-800">${proveedor.nombre}</p>
+              <p class="text-sm text-gray-600">${proveedor.telefono || 'Sin teléfono'}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-purple-600">Click para seleccionar</p>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+  };
+
+  // Event listeners y funcionalidad
+  function setupEventListeners() {
+    
+    // Selección de proveedor
+    const selectProveedor = document.getElementById('select-proveedor');
+    if (selectProveedor) {
+      selectProveedor.addEventListener('change', (e) => {
+        state.proveedorSeleccionado = e.target.value || null;
+        ui.actualizarInfoProveedor();
+      });
+    }
+
+    // Selección de producto
+    document.getElementById('select-producto').addEventListener('change', (e) => {
+      const productoId = e.target.value;
+      const producto = state.productos.find(p => p.id === productoId);
+      ui.mostrarInfoProducto(producto);
+    });
+
+    // Busqueda de productos
+    const busquedaProducto = document.getElementById('busqueda-producto');
+    if (busquedaProducto) {
+      const debouncedSearch = utils.debounce((termino) => {
+        const resultados = logic.buscarProductos(termino);
+        ui.mostrarResultadosBusqueda(resultados);
+      }, 300);
+      
+      busquedaProducto.addEventListener('input', (e) => {
+        debouncedSearch(e.target.value);
+      });
+    }
+
+    // Agregar producto
+    const btnAgregar = document.getElementById('agregar-producto');
+    
+    if (btnAgregar) {
+      btnAgregar.addEventListener('click', () => {
+        const selectProducto = document.getElementById('select-producto');
+        
+        if (!selectProducto) {
+          utils.showNotification('Error: Select de productos no encontrado', 'error');
+          return;
+        }
+        
+        const productoId = selectProducto.value;
+        
+        if (!productoId) {
+          utils.showNotification('Selecciona un producto', 'warning');
+          return;
+        }
+
+        const producto = state.productos.find(p => p.id === productoId);
+        
+        if (producto) {
+          // Usar el costo del producto o un valor por defecto
+          const costoUnitario = producto.costo || 0;
+          
+          if (costoUnitario <= 0) {
+            utils.showNotification('El producto no tiene un costo válido', 'warning');
+            return;
+          }
+          
+          logic.agregarProducto(producto, 1, costoUnitario);
+          selectProducto.value = '';
+        } else {
+          utils.showNotification('Producto no encontrado', 'error');
+        }
+      });
+    }
+
+    // Cantidad rápida (solo si existen los elementos)
+    document.querySelectorAll('.cantidad-rapida').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cantidad = parseInt(btn.dataset.cantidad);
+        const cantidadEl = document.getElementById('cantidad-producto');
+        if (cantidadEl) {
+          cantidadEl.value = cantidad;
+          ui.actualizarSubtotalItem();
+        }
+      });
+    });
+
+    // Cambios en cantidad y costo (solo si existen los elementos)
+    const cantidadEl = document.getElementById('cantidad-producto');
+    const costoEl = document.getElementById('costo-unitario');
+    
+    if (cantidadEl) {
+      cantidadEl.addEventListener('input', ui.actualizarSubtotalItem);
     }
     
-    if (!data || data.length === 0) {
-      historialDiv.innerHTML = `
-        <div class="text-center py-4">
-          <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-          </div>
-          <p class="text-gray-500 text-sm">No hay compras este mes</p>
-        </div>
-      `;
-      return;
+    if (costoEl) {
+      costoEl.addEventListener('input', ui.actualizarSubtotalItem);
     }
+
+    // Método de pago (solo si existe)
+    const metodoPagoEl = document.getElementById('metodo-pago');
+    if (metodoPagoEl) {
+      metodoPagoEl.addEventListener('change', (e) => {
+        state.metodoPago = e.target.value;
+      });
+    }
+
+    // Descuento (solo si existe)
+    const descuentoEl = document.getElementById('descuento');
+    if (descuentoEl) {
+      descuentoEl.addEventListener('input', (e) => {
+        state.descuento = parseFloat(e.target.value) || 0;
+        ui.actualizarCarrito();
+      });
+    }
+
+    // Limpiar carrito (solo si existe)
+    const limpiarCarritoEl = document.getElementById('limpiar-carrito');
+    if (limpiarCarritoEl) {
+      limpiarCarritoEl.addEventListener('click', () => {
+        if (confirm('¿Estás seguro de que quieres limpiar el carrito?')) {
+          logic.limpiarCarrito();
+        }
+      });
+    }
+
+    // Confirmar compra
+    document.getElementById('confirmar-compra').addEventListener('click', async () => {
+      if (state.carrito.length === 0) {
+        utils.showNotification('Agrega productos al carrito', 'warning');
+        return;
+      }
+
+      if (!state.proveedorSeleccionado) {
+        utils.showNotification('Selecciona un proveedor', 'warning');
+        return;
+      }
+
+      const total = logic.calcularTotal();
+      if (confirm(`¿Confirmar compra por ${utils.formatCurrency(total)}?`)) {
+        await api.crearCompra();
+      }
+    });
+
+    // Nuevo proveedor (solo si existen los elementos)
+    const nuevoProveedorBtn = document.getElementById('nuevo-proveedor-btn');
+    const cancelarProveedorBtn = document.getElementById('cancelar-proveedor');
+    const modalProveedor = document.getElementById('modal-nuevo-proveedor');
+    const formProveedor = document.getElementById('form-nuevo-proveedor');
     
-    historialDiv.innerHTML = data.map(c => `
-      <div class="bg-white rounded-lg p-3 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer" data-id="${c.id}">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <p class="font-semibold text-gray-800 text-sm">${c.proveedores?.nombre || 'Sin proveedor'}</p>
-            <p class="text-xs text-gray-500">${new Date(c.created_at).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
-          </div>
-          <div class="text-right">
-            <p class="font-bold text-purple-600">$${c.total?.toFixed(2)}</p>
-            <p class="text-xs text-gray-500">Compra</p>
-          </div>
-        </div>
-      </div>
-    `).join('');
-    
-    // Event listeners para expandir detalles
-    data.forEach(c => {
-      const row = historialDiv.querySelector(`[data-id="${c.id}"]`);
-      row.onclick = () => toggleDetalleCompra(c.id);
+    if (nuevoProveedorBtn && modalProveedor) {
+      nuevoProveedorBtn.addEventListener('click', () => {
+        modalProveedor.classList.remove('hidden');
+      });
+    }
+
+    if (cancelarProveedorBtn && modalProveedor && formProveedor) {
+      cancelarProveedorBtn.addEventListener('click', () => {
+        modalProveedor.classList.add('hidden');
+        formProveedor.reset();
+      });
+    }
+
+    if (formProveedor) {
+      formProveedor.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const nombreEl = document.getElementById('nombre-proveedor');
+        const telefonoEl = document.getElementById('telefono-proveedor');
+        const emailEl = document.getElementById('email-proveedor');
+        const direccionEl = document.getElementById('direccion-proveedor');
+        
+        if (!nombreEl) return;
+        
+        const datosProveedor = {
+          nombre: nombreEl.value,
+          telefono: telefonoEl?.value || '',
+          email: emailEl?.value || '',
+          direccion: direccionEl?.value || ''
+        };
+
+        const proveedor = await api.crearProveedor(datosProveedor);
+        if (proveedor) {
+          if (modalProveedor) modalProveedor.classList.add('hidden');
+          if (formProveedor) formProveedor.reset();
+          
+          const selectProveedor = document.getElementById('select-proveedor');
+          if (selectProveedor) {
+            selectProveedor.value = proveedor.id;
+            state.proveedorSeleccionado = proveedor.id;
+            ui.actualizarInfoProveedor();
+          }
+        }
+      });
+    }
+
+    // Búsqueda en historial (solo si existe)
+    const busquedaProveedor = document.getElementById('buscar-compra-proveedor');
+    if (busquedaProveedor) {
+      const debouncedSearchProveedor = utils.debounce((filtro) => {
+        api.cargarHistorialCompras(filtro);
+      }, 300);
+      
+      busquedaProveedor.addEventListener('input', (e) => {
+        debouncedSearchProveedor(e.target.value);
+      });
+    }
+
+    // Atajos de teclado
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        document.getElementById('busqueda-producto').focus();
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        document.getElementById('nuevo-proveedor-btn').click();
+      } else if (e.key === 'Escape') {
+        document.querySelectorAll('.fixed.inset-0').forEach(modal => {
+          modal.classList.add('hidden');
+        });
+      } else if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('confirmar-compra').click();
+      }
     });
   }
 
-  async function toggleDetalleCompra(compraId) {
-    const detalleDiv = document.getElementById(`detalle-compra-${compraId}`);
-    if (detalleDiv) {
-      if (!detalleDiv.classList.contains('hidden')) {
-        detalleDiv.classList.add('hidden');
-        detalleDiv.innerHTML = '';
-        return;
-      }
+  // Funciones globales para el HTML
+  window.logic = logic;
+  window.seleccionarProductoBusqueda = (productoId) => {
+    const producto = state.productos.find(p => p.id === productoId);
+    if (producto) {
+      document.getElementById('select-producto').value = productoId;
+      ui.mostrarInfoProducto(producto);
+      document.getElementById('resultados-busqueda-producto').classList.add('hidden');
+      document.getElementById('busqueda-producto').value = producto.nombre;
     }
+  };
+
+  window.seleccionarProveedor = (proveedorId) => {
+    document.getElementById('select-proveedor').value = proveedorId;
+    state.proveedorSeleccionado = proveedorId;
+    ui.actualizarInfoProveedor();
+  };
+
+  window.verDetalleCompra = async (compraId) => {
+    console.log('Ver detalle de compra:', compraId);
+  };
+
+  // Cargar datos iniciales
+  async function cargarTodosLosDatos() {
+    await Promise.all([
+      api.cargarProveedores(),
+      api.cargarProductos(),
+      api.cargarEstadisticas(),
+      api.cargarHistorialCompras()
+    ]);
     
-    // Crear elemento si no existe
-    if (!detalleDiv) {
-      const parent = document.querySelector(`[data-id="${compraId}"]`);
-      const newDiv = document.createElement('div');
-      newDiv.id = `detalle-compra-${compraId}`;
-      newDiv.className = 'mt-3 p-3 bg-gray-50 rounded-lg';
-      parent.appendChild(newDiv);
-    }
-    
-    const { data: detalles } = await supabase
-      .from('compra_detalle')
-      .select('*,productos(nombre)')
-      .eq('compra_id', compraId);
-    
-    const targetDiv = document.getElementById(`detalle-compra-${compraId}`);
-    targetDiv.classList.remove('hidden');
-    
-    if (detalles && detalles.length > 0) {
-      targetDiv.innerHTML = `
-        <div class="space-y-2">
-          ${detalles.map(d => `
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-700">${d.productos?.nombre || ''}</span>
-              <span class="text-gray-600">${d.cantidad} × $${d.precio_unitario?.toFixed(2)} = $${d.subtotal?.toFixed(2)}</span>
-            </div>
-          `).join('')}
-        </div>
-      `;
-    } else {
-      targetDiv.innerHTML = '<p class="text-gray-500 text-sm">Sin detalle disponible.</p>';
-    }
+    // Actualizar UI después de cargar los datos
+    ui.actualizarSelectProveedores();
+    ui.actualizarSelectProductos();
+    ui.actualizarProveedoresPrincipales();
   }
 
   // Inicialización
-  await cargarProveedores();
-  await cargarProductos();
-  await cargarEstadisticas();
-  await cargarHistorialCompras();
-  renderCarrito();
-  calcularTotal();
+  await cargarTodosLosDatos();
+  ui.actualizarCarrito();
+  setupEventListeners();
 
-  // Event listeners
-  document.getElementById('buscar-compra-proveedor').oninput = (e) => cargarHistorialCompras(e.target.value);
-
-  // Cerrar modales con Escape (no hay modal propio, pero sí podemos cerrar posibles overlays)
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      const overlays = document.querySelectorAll('.fixed.inset-0');
-      overlays.forEach((o) => o.classList.add('hidden'));
-    }
-  });
 } 

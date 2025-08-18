@@ -1,5 +1,117 @@
 import { supabase } from '../supabaseClient.js';
 
+// Estado global del módulo de inventario
+const inventarioState = {
+  productos: [],
+  proveedores: [],
+  categorias: [],
+  filtros: {
+    busqueda: '',
+    categoria: '',
+    proveedor: '',
+    estado: '',
+    ordenamiento: 'nombre_asc'
+  },
+  vista: 'grid', // 'grid' | 'lista' | 'tabla'
+  seleccionados: new Set(),
+  paginacion: {
+    pagina: 1,
+    porPagina: 12,
+    total: 0
+  }
+};
+
+// Utilidades del inventario
+const inventarioUtils = {
+  formatearMoneda: (valor) => new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS'
+  }).format(valor || 0),
+
+  formatearFecha: (fecha) => new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric'
+  }).format(new Date(fecha)),
+
+  calcularPrecioVenta: (costo, margen) => costo * (1 + margen),
+
+  determinarEstadoStock: (stock, minimo = 5) => {
+    if (stock === 0) return 'agotado';
+    if (stock <= minimo) return 'bajo';
+    if (stock <= minimo * 2) return 'medio';
+    return 'bueno';
+  },
+
+  generarCodigoBarra: () => {
+    return 'INV' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 3).toUpperCase();
+  },
+
+  mostrarNotificacion: (mensaje, tipo = 'info') => {
+    const colores = {
+      exito: 'bg-green-500',
+      error: 'bg-red-500', 
+      alerta: 'bg-yellow-500',
+      info: 'bg-blue-500'
+    };
+    
+    const notif = document.createElement('div');
+    notif.className = `fixed top-4 right-4 ${colores[tipo]} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full`;
+    notif.innerHTML = `
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        ${mensaje}
+      </div>
+    `;
+    
+    document.body.appendChild(notif);
+    setTimeout(() => notif.classList.remove('translate-x-full'), 100);
+    setTimeout(() => {
+      notif.classList.add('translate-x-full');
+      setTimeout(() => notif.remove(), 300);
+    }, 4000);
+  },
+
+  validarProducto: (producto) => {
+    const errores = [];
+    
+    if (!producto.nombre?.trim()) errores.push('El nombre es obligatorio');
+    if (!producto.tipo) errores.push('El tipo es obligatorio');
+    if (producto.costo < 0) errores.push('El costo no puede ser negativo');
+    if (producto.stock < 0) errores.push('El stock no puede ser negativo');
+    if (producto.margen < 0 || producto.margen > 10) errores.push('El margen debe estar entre 0% y 1000%');
+    
+    return errores;
+  },
+
+  exportarExcel: (productos) => {
+    const headers = ['Nombre', 'Tipo', 'Marca', 'Stock', 'Costo', 'Precio', 'Proveedor', 'Fecha Creación'];
+    const rows = productos.map(p => [
+      p.nombre,
+      p.tipo,
+      p.marca || '',
+      p.stock,
+      p.costo,
+      inventarioUtils.calcularPrecioVenta(p.costo, p.margen),
+      p.proveedores?.nombre || '',
+      inventarioUtils.formatearFecha(p.created_at)
+    ]);
+    
+    let csv = headers.join(',') + '\n';
+    csv += rows.map(row => row.join(',')).join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `inventario_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+};
+
 export async function renderInventario(container) {
   container.innerHTML = `
     <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">

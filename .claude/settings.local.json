@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(node -e \"console.log(''Testing ES6 module syntax validation...'')\")"
     ],
     "deny": [],
     "ask": []

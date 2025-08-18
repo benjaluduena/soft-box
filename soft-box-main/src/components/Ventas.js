@@ -90,20 +90,8 @@ export async function renderVentas(container, usuario_id) {
             
             <div class="flex items-center gap-4">
               <div class="text-right text-sm">
-                <div class="text-gray-600">Usuario:</div>
-                <div class="font-semibold text-gray-800">${usuario_id}</div>
                 <div id="hora-actual" class="text-xs text-gray-500"></div>
               </div>
-              <button id="btn-refrescar-datos" class="p-3 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all duration-200 shadow-md hover:shadow-lg" title="Refrescar datos">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-              </button>
-              <button id="btn-diagnostico" class="p-3 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-all duration-200 shadow-md hover:shadow-lg" title="Ejecutar diagnóstico">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-              </button>
             </div>
           </div>
           
@@ -120,7 +108,6 @@ export async function renderVentas(container, usuario_id) {
               <div><kbd class="px-2 py-1 bg-white rounded border shadow-sm">F2</kbd> Buscar</div>
               <div><kbd class="px-2 py-1 bg-white rounded border shadow-sm">F3</kbd> Cliente</div>
               <div><kbd class="px-2 py-1 bg-white rounded border shadow-sm">F4</kbd> Historial</div>
-              <div><kbd class="px-2 py-1 bg-white rounded border shadow-sm">F5</kbd> Refrescar</div>
               <div><kbd class="px-2 py-1 bg-white rounded border shadow-sm">Ctrl+Enter</kbd> Vender</div>
             </div>
           </div>
@@ -1272,17 +1259,6 @@ export async function renderVentas(container, usuario_id) {
     actualizarHora();
     setInterval(actualizarHora, 1000);
 
-    // Refrescar datos
-    document.getElementById('btn-refrescar-datos').addEventListener('click', async () => {
-      await cargarTodosLosDatos();
-      utils.showNotification('Datos actualizados', 'success');
-    });
-
-    // Ejecutar diagnóstico
-    document.getElementById('btn-diagnostico').addEventListener('click', async () => {
-      await diagnosticarSistema();
-      utils.showNotification('Diagnóstico ejecutado - revisa la consola', 'info');
-    });
 
     // Selección de cliente
     document.getElementById('select-cliente').addEventListener('change', (e) => {
@@ -1444,9 +1420,6 @@ export async function renderVentas(container, usuario_id) {
       } else if (e.key === 'F3') {
         e.preventDefault();
         document.getElementById('nuevo-cliente-btn').click();
-      } else if (e.key === 'F5') {
-        e.preventDefault();
-        document.getElementById('btn-refrescar-datos').click();
       } else if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         document.getElementById('confirmar-venta').click();
@@ -1471,65 +1444,9 @@ export async function renderVentas(container, usuario_id) {
     console.log('Ver detalle de venta:', ventaId);
   };
 
-  // Función de diagnóstico para verificar autenticación y permisos
-  async function diagnosticarSistema() {
-    try {
-      console.log('=== DIAGNÓSTICO DEL SISTEMA ===');
-      
-      // Verificar autenticación
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      console.log('Usuario autenticado:', user ? user.id : 'No autenticado');
-      console.log('Error de auth:', authError);
-      
-      if (user) {
-        // Verificar perfil
-        const { data: perfil, error: perfilError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        
-        console.log('Perfil del usuario:', perfil);
-        console.log('Error de perfil:', perfilError);
-        
-        // Test de permisos básicos
-        const { data: testClientes, error: errorClientes } = await supabase
-          .from('clientes')
-          .select('id, nombre')
-          .limit(1);
-        
-        console.log('Test clientes:', testClientes);
-        console.log('Error clientes:', errorClientes);
-        
-        const { data: testProductos, error: errorProductos } = await supabase
-          .from('productos')
-          .select('id, nombre')
-          .limit(1);
-        
-        console.log('Test productos:', testProductos);
-        console.log('Error productos:', errorProductos);
-        
-        // Verificar estado actual
-        console.log('Estado actual del sistema:');
-        console.log('- Cliente seleccionado:', state.clienteSeleccionado);
-        console.log('- Método de pago:', state.metodoPago);
-        console.log('- Plazo cheque:', state.plazoCheque, 'días');
-        console.log('- Descuento:', state.descuento, '%');
-        console.log('- Carrito:', state.carrito.length, 'productos');
-        console.log('- Productos en carrito:', state.carrito);
-      }
-      
-      console.log('=== FIN DIAGNÓSTICO ===');
-    } catch (error) {
-      console.error('Error en diagnóstico:', error);
-    }
-  }
 
   // Cargar datos iniciales
   async function cargarTodosLosDatos() {
-    // Ejecutar diagnóstico primero
-    await diagnosticarSistema();
-    
     await Promise.all([
       api.cargarClientes(),
       api.cargarProductos(),
