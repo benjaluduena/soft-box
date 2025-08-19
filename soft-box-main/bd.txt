@@ -63,6 +63,7 @@ CREATE TABLE public.proveedores (
   rubro text,
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp without time zone DEFAULT now(),
+  margen_ganancia numeric DEFAULT 0.30 CHECK (margen_ganancia >= 0::numeric AND margen_ganancia <= 10::numeric),
   CONSTRAINT proveedores_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.turnos (
@@ -96,8 +97,8 @@ CREATE TABLE public.venta_detalle (
   subtotal numeric,
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   CONSTRAINT venta_detalle_pkey PRIMARY KEY (id),
-  CONSTRAINT venta_detalle_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas(id),
-  CONSTRAINT venta_detalle_producto_id_fkey FOREIGN KEY (producto_id) REFERENCES public.productos(id)
+  CONSTRAINT venta_detalle_producto_id_fkey FOREIGN KEY (producto_id) REFERENCES public.productos(id),
+  CONSTRAINT venta_detalle_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas(id)
 );
 CREATE TABLE public.ventas (
   cliente_id uuid,
@@ -110,6 +111,6 @@ CREATE TABLE public.ventas (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp without time zone DEFAULT now(),
   CONSTRAINT ventas_pkey PRIMARY KEY (id),
-  CONSTRAINT ventas_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.profiles(id),
-  CONSTRAINT ventas_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id)
+  CONSTRAINT ventas_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id),
+  CONSTRAINT ventas_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.profiles(id)
 );

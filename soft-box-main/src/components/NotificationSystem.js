@@ -26,7 +26,7 @@ class NotificationSystem {
 
     const container = document.createElement('div');
     container.id = 'notification-container';
-    container.className = 'fixed top-4 right-4 z-50 space-y-2 max-w-sm';
+    container.className = 'fixed top-4 right-4 z-[80] space-y-2 max-w-sm';
     document.body.appendChild(container);
   }
 
@@ -88,27 +88,47 @@ class NotificationSystem {
   }
 
   async checkReminders() {
-    // Verificar recordatorios personalizados
-    const { data: recordatorios } = await supabase
-      .from('recordatorios')
-      .select('*')
-      .eq('fecha', new Date().toISOString().slice(0, 10))
-      .eq('completado', false);
+    try {
+      // Verificar recordatorios personalizados
+      const { data: recordatorios, error } = await supabase
+        .from('recordatorios')
+        .select('*')
+        .eq('fecha', new Date().toISOString().slice(0, 10))
+        .eq('completado', false);
 
-    if (recordatorios && recordatorios.length > 0) {
-      recordatorios.forEach(recordatorio => {
-        this.showNotification({
-          type: 'reminder',
-          title: 'Recordatorio',
-          message: recordatorio.descripcion,
-          action: () => this.markReminderComplete(recordatorio.id),
-          duration: 15000
+      if (error && error.code === '42P01') {
+        // Tabla no existe, ignorar
+        console.log('Tabla recordatorios no existe, saltando verificación');
+        return;
+      }
+
+      if (recordatorios && recordatorios.length > 0) {
+        recordatorios.forEach(recordatorio => {
+          this.showNotification({
+            type: 'reminder',
+            title: 'Recordatorio',
+            message: recordatorio.descripcion,
+            action: () => this.markReminderComplete(recordatorio.id),
+            duration: 15000
+          });
         });
-      });
+      }
+    } catch (error) {
+      console.error('Error checking reminders:', error);
+      // No lanzar error para no romper el sistema
     }
   }
 
   showNotification({ type, title, message, action, duration = 5000 }) {
+    // Asegurar que el contenedor exista
+    this.createNotificationContainer();
+    
+    const container = document.getElementById('notification-container');
+    if (!container) {
+      console.error('No se pudo crear el contenedor de notificaciones');
+      return;
+    }
+
     const notification = document.createElement('div');
     notification.className = `
       transform transition-all duration-300 ease-out translate-x-full
@@ -145,7 +165,6 @@ class NotificationSystem {
       </div>
     `;
 
-    const container = document.getElementById('notification-container');
     container.appendChild(notification);
 
     // Animar entrada
@@ -227,6 +246,38 @@ class NotificationSystem {
       .from('recordatorios')
       .update({ completado: true })
       .eq('id', id);
+  }
+
+  // Método para mostrar notificaciones instantáneas
+  show(message, type = 'success', duration = 3000) {
+    try {
+      console.log('NotificationSystem.show called:', { message, type, duration });
+      
+      // Asegurar que el contenedor exista
+      this.createNotificationContainer();
+      
+      // Usar el método existente con la estructura correcta
+      this.showNotification({ 
+        type, 
+        title: this.getNotificationTitle(type), 
+        message, 
+        duration 
+      });
+    } catch (error) {
+      console.error('Error in NotificationSystem.show:', error);
+      // Fallback a alert
+      alert(`${type.toUpperCase()}: ${message}`);
+    }
+  }
+
+  getNotificationTitle(type) {
+    const titles = {
+      success: 'Éxito',
+      error: 'Error',
+      warning: 'Advertencia',
+      info: 'Información'
+    };
+    return titles[type] || 'Notificación';
   }
 }
 

@@ -10,6 +10,8 @@ import { renderTurnos } from './components/Turnos.js';
 import { renderDashboard } from './components/Dashboard.js';
 import { renderProveedores } from './components/Proveedores.js';
 import { renderVehiculosGlobal } from './components/Vehiculos.js';
+import { renderCotizaciones } from './components/Cotizaciones.js';
+import { renderServicios } from './components/Servicios.js';
 import { notificationSystem } from './components/NotificationSystem.js';
 import { quickActions } from './components/QuickActions.js';
 
@@ -198,6 +200,8 @@ function renderCurrentRoute() {
     '#inventario': () => renderInventario(mainContent),
     '#ventas': () => currentUser && renderVentas(mainContent, currentUser.id),
     '#compras': () => currentUser && renderCompras(mainContent, currentUser.id),
+    '#cotizaciones': () => currentUser && renderCotizaciones(mainContent, currentUser.id),
+    '#servicios': () => currentUser && renderServicios(mainContent, currentUser.id),
     '#turnos': () => renderTurnos(mainContent),
     '#proveedores': () => renderProveedores(mainContent),
     '#vehiculos': () => renderVehiculosGlobal(mainContent)

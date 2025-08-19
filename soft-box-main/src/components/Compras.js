@@ -208,7 +208,7 @@ export async function renderCompras(container, usuario_id) {
               <div class="p-4 border-b border-gray-100">
                 <div class="flex items-center justify-between">
                   <h3 class="text-lg font-semibold text-gray-800">Historial Reciente</h3>
-                  <button id="ver-todo-historial" class="text-sm text-purple-600 hover:text-purple-800">Ver todo</button>
+                  <button id="ver-todo-historial" onclick="verHistorialCompleto()" class="text-sm text-purple-600 hover:text-purple-800">Ver todo</button>
                 </div>
               </div>
               
@@ -245,6 +245,106 @@ export async function renderCompras(container, usuario_id) {
                 <!-- Se llena dinámicamente -->
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Historial Completo -->
+    <div id="modal-historial-completo" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+      <div class="bg-white rounded-2xl w-full max-w-6xl mx-4 shadow-2xl max-h-[90vh] overflow-hidden">
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-800">Historial Completo de Compras</h3>
+            </div>
+            <button id="cerrar-historial-completo" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Filtros del historial -->
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+              <select id="filtro-historial-proveedor" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="">Todos los proveedores</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+              <input type="date" id="filtro-historial-desde" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+              <input type="date" id="filtro-historial-hasta" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Monto Mínimo</label>
+              <input type="number" id="filtro-historial-monto-min" placeholder="$0.00" step="0.01" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            </div>
+            <div class="flex items-end">
+              <button id="aplicar-filtros-historial" class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                Filtrar
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="p-6 max-h-[70vh] overflow-y-auto">
+          <div id="lista-historial-completo" class="space-y-4">
+            <!-- Se llena dinámicamente -->
+          </div>
+        </div>
+        
+        <div class="p-4 border-t border-gray-200 bg-gray-50">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+              Total de compras: <span id="total-compras-historial" class="font-bold">0</span> |
+              Monto total: <span id="monto-total-historial" class="font-bold text-purple-600">$0.00</span>
+            </div>
+            <button id="exportar-historial" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+              Exportar CSV
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Detalle de Compra -->
+    <div id="modal-detalle-compra" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+      <div class="bg-white rounded-2xl w-full max-w-4xl mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-2xl font-bold text-gray-800">Detalle de Compra</h3>
+                <p class="text-gray-600" id="compra-numero">Compra #---</p>
+              </div>
+            </div>
+            <button id="cerrar-detalle-compra" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="p-6">
+          <div id="contenido-detalle-compra">
+            <!-- Se llena dinámicamente -->
           </div>
         </div>
       </div>
@@ -1079,7 +1179,11 @@ export async function renderCompras(container, usuario_id) {
   };
 
   window.verDetalleCompra = async (compraId) => {
-    console.log('Ver detalle de compra:', compraId);
+    await mostrarDetalleCompra(compraId);
+  };
+  
+  window.verHistorialCompleto = () => {
+    mostrarHistorialCompleto();
   };
 
   // Cargar datos iniciales
@@ -1097,9 +1201,401 @@ export async function renderCompras(container, usuario_id) {
     ui.actualizarProveedoresPrincipales();
   }
 
+  // Funciones para modales
+  async function mostrarHistorialCompleto() {
+    const modal = document.getElementById('modal-historial-completo');
+    modal.classList.remove('hidden');
+    
+    // Llenar filtro de proveedores
+    const selectProveedor = document.getElementById('filtro-historial-proveedor');
+    selectProveedor.innerHTML = '<option value="">Todos los proveedores</option>' +
+      state.proveedores.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+    
+    // Cargar historial completo inicial
+    await cargarHistorialCompleto();
+  }
+  
+  async function cargarHistorialCompleto(filtros = {}) {
+    try {
+      let query = supabase
+        .from('compras')
+        .select(`
+          *,
+          proveedores(nombre, telefono, email),
+          profiles(nombre, apellido)
+        `)
+        .order('created_at', { ascending: false });
+      
+      // Aplicar filtros
+      if (filtros.proveedor) {
+        query = query.eq('proveedor_id', filtros.proveedor);
+      }
+      
+      if (filtros.desde) {
+        query = query.gte('created_at', filtros.desde + 'T00:00:00.000Z');
+      }
+      
+      if (filtros.hasta) {
+        query = query.lte('created_at', filtros.hasta + 'T23:59:59.999Z');
+      }
+      
+      if (filtros.montoMin) {
+        query = query.gte('total', parseFloat(filtros.montoMin));
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      const compras = data || [];
+      
+      // Actualizar resumen
+      document.getElementById('total-compras-historial').textContent = compras.length;
+      const montoTotal = compras.reduce((sum, c) => sum + (parseFloat(c.total) || 0), 0);
+      document.getElementById('monto-total-historial').textContent = utils.formatCurrency(montoTotal);
+      
+      // Renderizar lista
+      const container = document.getElementById('lista-historial-completo');
+      
+      if (compras.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">No se encontraron compras</h3>
+            <p class="text-gray-500">Ajusta los filtros para ver más resultados</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = compras.map(compra => `
+        <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 group">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-lg font-bold">
+                #${compras.indexOf(compra) + 1}
+              </div>
+              <div>
+                <div class="flex items-center gap-3 mb-1">
+                  <h4 class="text-lg font-semibold text-gray-800">${compra.proveedores?.nombre || 'Proveedor no encontrado'}</h4>
+                  <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Completada
+                  </span>
+                </div>
+                <div class="flex items-center gap-4 text-sm text-gray-600">
+                  <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    ${utils.formatDate(compra.created_at)}
+                  </span>
+                  ${compra.profiles ? `
+                    <span class="flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                      </svg>
+                      ${compra.profiles.nombre} ${compra.profiles.apellido || ''}
+                    </span>
+                  ` : ''}
+                  ${compra.proveedores?.telefono ? `
+                    <span class="flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                      </svg>
+                      ${compra.proveedores.telefono}
+                    </span>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+              <div class="text-right">
+                <div class="text-2xl font-bold text-purple-600">${utils.formatCurrency(compra.total)}</div>
+                <div class="text-sm text-gray-500">Total</div>
+              </div>
+              
+              <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <button onclick="verDetalleCompra('${compra.id}')" 
+                  class="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                  title="Ver detalles">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+    } catch (error) {
+      console.error('Error cargando historial completo:', error);
+      utils.showNotification('Error al cargar historial', 'error');
+    }
+  }
+  
+  async function mostrarDetalleCompra(compraId) {
+    try {
+      // Cargar datos de la compra
+      const { data: compra, error: errorCompra } = await supabase
+        .from('compras')
+        .select(`
+          *,
+          proveedores(*),
+          profiles(nombre, apellido)
+        `)
+        .eq('id', compraId)
+        .single();
+      
+      if (errorCompra) throw errorCompra;
+      
+      // Cargar detalles de la compra
+      const { data: detalles, error: errorDetalles } = await supabase
+        .from('compra_detalle')
+        .select(`
+          *,
+          productos(nombre, tipo, marca, costo)
+        `)
+        .eq('compra_id', compraId)
+        .order('id');
+      
+      if (errorDetalles) throw errorDetalles;
+      
+      // Mostrar modal
+      const modal = document.getElementById('modal-detalle-compra');
+      const contenido = document.getElementById('contenido-detalle-compra');
+      const numero = document.getElementById('compra-numero');
+      
+      numero.textContent = `Compra #${compraId.slice(-8).toUpperCase()}`;
+      
+      contenido.innerHTML = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Información de la Compra -->
+          <div class="space-y-6">
+            <div class="bg-gray-50 rounded-xl p-6">
+              <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Información General
+              </h4>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="text-gray-600">Fecha:</span>
+                  <p class="font-medium">${utils.formatDate(compra.created_at)}</p>
+                </div>
+                <div>
+                  <span class="text-gray-600">Total:</span>
+                  <p class="font-bold text-purple-600 text-lg">${utils.formatCurrency(compra.total)}</p>
+                </div>
+                ${compra.profiles ? `
+                  <div class="col-span-2">
+                    <span class="text-gray-600">Realizada por:</span>
+                    <p class="font-medium">${compra.profiles.nombre} ${compra.profiles.apellido || ''}</p>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <!-- Información del Proveedor -->
+            ${compra.proveedores ? `
+              <div class="bg-blue-50 rounded-xl p-6">
+                <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h4a1 1 0 011 1v5m-6 0h6"></path>
+                  </svg>
+                  Proveedor
+                </h4>
+                <div class="space-y-2">
+                  <div>
+                    <span class="text-gray-600">Nombre:</span>
+                    <p class="font-semibold text-blue-800">${compra.proveedores.nombre}</p>
+                  </div>
+                  ${compra.proveedores.telefono ? `
+                    <div>
+                      <span class="text-gray-600">Teléfono:</span>
+                      <p class="font-medium">${compra.proveedores.telefono}</p>
+                    </div>
+                  ` : ''}
+                  ${compra.proveedores.email ? `
+                    <div>
+                      <span class="text-gray-600">Email:</span>
+                      <p class="font-medium">${compra.proveedores.email}</p>
+                    </div>
+                  ` : ''}
+                  ${compra.proveedores.direccion ? `
+                    <div>
+                      <span class="text-gray-600">Dirección:</span>
+                      <p class="font-medium">${compra.proveedores.direccion}</p>
+                    </div>
+                  ` : ''}
+                  ${compra.proveedores.margen_ganancia ? `
+                    <div>
+                      <span class="text-gray-600">Margen:</span>
+                      <p class="font-medium text-green-600">${(compra.proveedores.margen_ganancia * 100).toFixed(1)}%</p>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+          
+          <!-- Productos Comprados -->
+          <div>
+            <div class="bg-green-50 rounded-xl p-6">
+              <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+                Productos (${detalles?.length || 0})
+              </h4>
+              
+              <div class="space-y-3 max-h-96 overflow-y-auto">
+                ${detalles?.map(detalle => `
+                  <div class="bg-white rounded-lg p-4 border border-green-200">
+                    <div class="flex items-center justify-between mb-2">
+                      <h5 class="font-semibold text-gray-800">${detalle.productos?.nombre || 'Producto no encontrado'}</h5>
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        x${detalle.cantidad}
+                      </span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                      ${detalle.productos?.tipo ? `
+                        <div>
+                          <span class="text-gray-600">Tipo:</span>
+                          <span class="font-medium">${detalle.productos.tipo}</span>
+                        </div>
+                      ` : ''}
+                      ${detalle.productos?.marca ? `
+                        <div>
+                          <span class="text-gray-600">Marca:</span>
+                          <span class="font-medium">${detalle.productos.marca}</span>
+                        </div>
+                      ` : ''}
+                      <div>
+                        <span class="text-gray-600">Precio Unit.:</span>
+                        <span class="font-medium">${utils.formatCurrency(detalle.precio_unitario)}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600">Subtotal:</span>
+                        <span class="font-bold text-green-600">${utils.formatCurrency(detalle.subtotal)}</span>
+                      </div>
+                    </div>
+                  </div>
+                `).join('') || '<p class="text-center text-gray-500 py-4">No hay productos registrados</p>'}
+              </div>
+              
+              <div class="mt-4 pt-4 border-t border-green-200">
+                <div class="flex justify-between items-center">
+                  <span class="text-lg font-semibold text-gray-700">Total:</span>
+                  <span class="text-2xl font-bold text-green-600">${utils.formatCurrency(compra.total)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
+      
+    } catch (error) {
+      console.error('Error cargando detalle de compra:', error);
+      utils.showNotification('Error al cargar detalle de compra', 'error');
+    }
+  }
+  
+  function exportarHistorial() {
+    // Obtener datos actuales del historial
+    const compras = Array.from(document.querySelectorAll('#lista-historial-completo > div')).map((div, index) => {
+      const fechaElement = div.querySelector('svg + span');
+      const proveedorElement = div.querySelector('h4');
+      const totalElement = div.querySelector('.text-2xl');
+      
+      return {
+        'Número': index + 1,
+        'Proveedor': proveedorElement?.textContent || 'N/A',
+        'Fecha': fechaElement?.textContent || 'N/A',
+        'Total': totalElement?.textContent || 'N/A'
+      };
+    });
+    
+    if (compras.length === 0) {
+      utils.showNotification('No hay datos para exportar', 'warning');
+      return;
+    }
+    
+    // Convertir a CSV
+    const headers = Object.keys(compras[0]);
+    const csvContent = [
+      headers.join(','),
+      ...compras.map(row => headers.map(header => {
+        const value = row[header];
+        return typeof value === 'string' && (value.includes(',') || value.includes('"'))
+          ? `"${value.replace(/"/g, '""')}"`
+          : value;
+      }).join(','))
+    ].join('\n');
+    
+    // Crear y descargar archivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `historial_compras_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    utils.showNotification('Historial exportado exitosamente', 'success');
+  }
+  
+  // Event listeners para modales
+  function setupModalEventListeners() {
+    // Cerrar historial completo
+    document.getElementById('cerrar-historial-completo').addEventListener('click', () => {
+      document.getElementById('modal-historial-completo').classList.add('hidden');
+    });
+    
+    // Cerrar detalle compra
+    document.getElementById('cerrar-detalle-compra').addEventListener('click', () => {
+      document.getElementById('modal-detalle-compra').classList.add('hidden');
+    });
+    
+    // Filtros del historial
+    document.getElementById('aplicar-filtros-historial').addEventListener('click', () => {
+      const filtros = {
+        proveedor: document.getElementById('filtro-historial-proveedor').value,
+        desde: document.getElementById('filtro-historial-desde').value,
+        hasta: document.getElementById('filtro-historial-hasta').value,
+        montoMin: document.getElementById('filtro-historial-monto-min').value
+      };
+      
+      cargarHistorialCompleto(filtros);
+    });
+    
+    // Exportar historial
+    document.getElementById('exportar-historial').addEventListener('click', exportarHistorial);
+    
+    // Cerrar modales con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('modal-historial-completo').classList.add('hidden');
+        document.getElementById('modal-detalle-compra').classList.add('hidden');
+      }
+    });
+  }
+
   // Inicialización
   await cargarTodosLosDatos();
   ui.actualizarCarrito();
   setupEventListeners();
+  setupModalEventListeners();
 
 } 
