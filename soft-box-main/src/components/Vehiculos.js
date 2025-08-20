@@ -18,9 +18,43 @@ export async function renderVehiculos(container, cliente_id, onClose) {
     
     validarPatente: (patente) => {
       // Patentes argentinas: ABC123 o AB123CD (nuevo formato)
+      if (!patente || typeof patente !== 'string') return false;
+      const patenteClean = patente.trim().toUpperCase();
       const regexVieja = /^[A-Z]{3}[0-9]{3}$/;
       const regexNueva = /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/;
-      return regexVieja.test(patente) || regexNueva.test(patente);
+      return regexVieja.test(patenteClean) || regexNueva.test(patenteClean);
+    },
+
+    validarAño: (año) => {
+      const currentYear = new Date().getFullYear();
+      const numAño = parseInt(año);
+      return numAño >= 1900 && numAño <= currentYear + 1;
+    },
+
+    validarDatos: (vehiculoData) => {
+      const errores = [];
+      
+      if (!vehiculoData.marca?.trim()) {
+        errores.push('La marca es requerida');
+      }
+      
+      if (!vehiculoData.modelo?.trim()) {
+        errores.push('El modelo es requerido');
+      }
+      
+      if (!vehiculoData.patente?.trim()) {
+        errores.push('La patente es requerida');
+      } else if (!utils.validarPatente(vehiculoData.patente)) {
+        errores.push('Formato de patente inválido (use ABC123 o AB123CD)');
+      }
+      
+      if (!vehiculoData.año || vehiculoData.año === 0 || isNaN(vehiculoData.año)) {
+        errores.push('El año es requerido');
+      } else if (!utils.validarAño(vehiculoData.año)) {
+        errores.push('Año inválido (debe estar entre 1900 y ' + (new Date().getFullYear() + 1) + ')');
+      }
+      
+      return errores;
     },
 
     mostrarNotificacion: (mensaje, tipo = 'success') => {
@@ -42,8 +76,26 @@ export async function renderVehiculos(container, cliente_id, onClose) {
     obtenerMarcasComunes: () => [
       'Chevrolet', 'Ford', 'Volkswagen', 'Toyota', 'Renault', 'Peugeot',
       'Fiat', 'Nissan', 'Honda', 'Hyundai', 'Citroën', 'Kia', 'Audi',
-      'BMW', 'Mercedes-Benz', 'Suzuki', 'Mitsubishi', 'Jeep', 'RAM'
-    ]
+      'BMW', 'Mercedes-Benz', 'Suzuki', 'Mitsubishi', 'Jeep', 'RAM',
+      'Subaru', 'Mazda', 'Volvo', 'Alfa Romeo', 'MINI', 'Dodge'
+    ],
+
+    formatearNombre: (texto) => {
+      if (!texto || typeof texto !== 'string') return '';
+      return texto.replace(/\b\w/g, l => l.toUpperCase());
+    },
+
+    debounce: (func, wait) => {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
   };
 
   container.innerHTML = `
@@ -153,18 +205,30 @@ export async function renderVehiculos(container, cliente_id, onClose) {
 
     async guardarVehiculo(vehiculoData, id = null) {
       try {
-        // Validar patente
-        if (!utils.validarPatente(vehiculoData.patente)) {
-          throw new Error('Formato de patente inválido. Use ABC123 o AB123CD');
+        // Validar datos completos
+        const errores = utils.validarDatos(vehiculoData);
+        if (errores.length > 0) {
+          throw new Error(errores.join(', '));
         }
 
+        // Formatear datos (los datos ya vienen formateados del formulario)
+        vehiculoData.marca = utils.formatearNombre(vehiculoData.marca || '');
+        vehiculoData.modelo = utils.formatearNombre(vehiculoData.modelo || '');
+        vehiculoData.patente = (vehiculoData.patente || '').toUpperCase();
+        vehiculoData.color = vehiculoData.color ? utils.formatearNombre(vehiculoData.color) : '';
+
         // Verificar patente duplicada
-        const { data: existentes } = await supabase
+        let query = supabase
           .from('vehiculos')
           .select('id')
           .eq('cliente_id', vehiculoData.cliente_id)
-          .eq('patente', vehiculoData.patente)
-          .neq('id', id || '');
+          .eq('patente', vehiculoData.patente);
+        
+        if (id) {
+          query = query.neq('id', id);
+        }
+        
+        const { data: existentes } = await query;
 
         if (existentes && existentes.length > 0) {
           throw new Error('Ya existe un vehículo con esa patente para este cliente');
@@ -277,22 +341,22 @@ export async function renderVehiculos(container, cliente_id, onClose) {
             </div>
             
             <div class="flex flex-col gap-2 ml-4">
-              <button onclick="ui.editarVehiculo('${vehiculo.id}')" 
-                class="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors flex items-center gap-2 text-sm font-medium">
+              <button data-vehiculo-id="${vehiculo.id}" data-action="editar"
+                class="editar-vehiculo px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors flex items-center gap-2 text-sm font-medium">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                 </svg>
                 Editar
               </button>
-              <button onclick="ui.confirmarEliminarVehiculo('${vehiculo.id}', '${vehiculo.marca} ${vehiculo.modelo}')" 
-                class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2 text-sm font-medium">
+              <button data-vehiculo-id="${vehiculo.id}" data-vehiculo-nombre="${vehiculo.marca} ${vehiculo.modelo}" data-action="eliminar"
+                class="eliminar-vehiculo px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2 text-sm font-medium">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                 </svg>
                 Eliminar
               </button>
-              <button onclick="ui.verDetalleVehiculo('${vehiculo.id}')" 
-                class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm font-medium">
+              <button data-vehiculo-id="${vehiculo.id}" data-action="detalle"
+                class="detalle-vehiculo px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm font-medium">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
@@ -302,6 +366,37 @@ export async function renderVehiculos(container, cliente_id, onClose) {
           </div>
         </div>
       `).join('');
+      
+      // Agregar event listeners para los botones
+      this.configurarEventListenersBotones();
+    },
+
+    configurarEventListenersBotones() {
+      // Event listeners para botones de editar
+      document.querySelectorAll('.editar-vehiculo').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const vehiculoId = e.currentTarget.dataset.vehiculoId;
+          console.log('Editando vehículo:', vehiculoId);
+          this.editarVehiculo(vehiculoId);
+        });
+      });
+
+      // Event listeners para botones de eliminar
+      document.querySelectorAll('.eliminar-vehiculo').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const vehiculoId = e.currentTarget.dataset.vehiculoId;
+          const vehiculoNombre = e.currentTarget.dataset.vehiculoNombre;
+          this.confirmarEliminarVehiculo(vehiculoId, vehiculoNombre);
+        });
+      });
+
+      // Event listeners para botones de detalle
+      document.querySelectorAll('.detalle-vehiculo').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const vehiculoId = e.currentTarget.dataset.vehiculoId;
+          this.verDetalleVehiculo(vehiculoId);
+        });
+      });
     },
 
     filtrarVehiculos() {
@@ -504,11 +599,8 @@ export async function renderVehiculos(container, cliente_id, onClose) {
       const patenteInput = form.querySelector('input[name="patente"]');
       const validacionDiv = document.getElementById('validacion-patente');
 
-      // Auto-uppercase y validación de patente
-      patenteInput.addEventListener('input', (e) => {
-        const valor = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        e.target.value = valor;
-        
+      // Auto-uppercase y validación de patente con debounce
+      const validarPatenteDebounced = utils.debounce((valor) => {
         if (valor.length > 0) {
           const esValida = utils.validarPatente(valor);
           validacionDiv.classList.remove('hidden');
@@ -516,14 +608,48 @@ export async function renderVehiculos(container, cliente_id, onClose) {
           if (esValida) {
             validacionDiv.className = 'p-3 rounded-lg text-sm bg-green-50 border border-green-200 text-green-700';
             validacionDiv.innerHTML = '✅ Formato de patente válido';
+          } else if (valor.length >= 6) {
+            validacionDiv.className = 'p-3 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700';
+            validacionDiv.innerHTML = '❌ Formato inválido. Use ABC123 o AB123CD';
           } else {
             validacionDiv.className = 'p-3 rounded-lg text-sm bg-yellow-50 border border-yellow-200 text-yellow-700';
-            validacionDiv.innerHTML = '⚠️ Formato: ABC123 (viejo) o AB123CD (nuevo)';
+            validacionDiv.innerHTML = '⚠️ Escribiendo... Formato: ABC123 (viejo) o AB123CD (nuevo)';
           }
         } else {
           validacionDiv.classList.add('hidden');
         }
+      }, 300);
+
+      patenteInput.addEventListener('input', (e) => {
+        const valor = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        e.target.value = valor;
+        validarPatenteDebounced(valor);
       });
+
+      // Validación en tiempo real para marca y modelo
+      const marcaInput = form.querySelector('input[name="marca"]');
+      const modeloInput = form.querySelector('input[name="modelo"]');
+      const añoInput = form.querySelector('input[name="año"]');
+
+      if (marcaInput && modeloInput) {
+        [marcaInput, modeloInput].forEach(input => {
+          input.addEventListener('input', (e) => {
+            e.target.value = utils.formatearNombre(e.target.value);
+          });
+        });
+      }
+
+      if (añoInput) {
+        añoInput.addEventListener('input', (e) => {
+          const año = parseInt(e.target.value);
+          const currentYear = new Date().getFullYear();
+          if (año && (año < 1900 || año > currentYear + 1)) {
+            e.target.setCustomValidity(`El año debe estar entre 1900 y ${currentYear + 1}`);
+          } else {
+            e.target.setCustomValidity('');
+          }
+        });
+      }
 
       // Cerrar modal
       document.getElementById('cerrar-modal').addEventListener('click', () => {
@@ -549,31 +675,55 @@ export async function renderVehiculos(container, cliente_id, onClose) {
         
         const formData = new FormData(form);
         const vehiculoData = {
-          marca: formData.get('marca').trim(),
-          modelo: formData.get('modelo').trim(),
-          patente: formData.get('patente').trim().toUpperCase(),
-          año: parseInt(formData.get('año')),
-          color: formData.get('color').trim(),
-          combustible: formData.get('combustible'),
-          observaciones: formData.get('observaciones').trim(),
+          marca: (formData.get('marca') || '').trim(),
+          modelo: (formData.get('modelo') || '').trim(),
+          patente: (formData.get('patente') || '').trim().toUpperCase(),
+          año: parseInt(formData.get('año') || 0),
+          color: (formData.get('color') || '').trim(),
+          combustible: formData.get('combustible') || '',
+          observaciones: (formData.get('observaciones') || '').trim(),
           cliente_id: cliente_id
         };
 
         try {
           const botonGuardar = document.getElementById('guardar-vehiculo');
+          const errorDiv = document.getElementById('vehiculo-form-error');
+          
+          // Ocultar errores previos
+          errorDiv.classList.add('hidden');
+          
+          // Validación final antes de enviar
+          const errores = utils.validarDatos(vehiculoData);
+          if (errores.length > 0) {
+            throw new Error(errores.join('\n'));
+          }
+          
           botonGuardar.disabled = true;
-          botonGuardar.textContent = 'Guardando...';
+          botonGuardar.innerHTML = `
+            <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Guardando...
+          `;
 
           await api.guardarVehiculo(vehiculoData, vehiculoId);
           modal.classList.add('hidden');
         } catch (error) {
           const errorDiv = document.getElementById('vehiculo-form-error');
-          errorDiv.textContent = error.message;
+          errorDiv.innerHTML = error.message.split('\n').map(err => `<div class="flex items-center gap-2"><svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>${err}</div>`).join('');
           errorDiv.classList.remove('hidden');
+          
+          // Scroll al error
+          errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } finally {
           const botonGuardar = document.getElementById('guardar-vehiculo');
           botonGuardar.disabled = false;
-          botonGuardar.textContent = vehiculoId ? 'Actualizar Vehículo' : 'Guardar Vehículo';
+          botonGuardar.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            ${vehiculoId ? 'Actualizar' : 'Guardar'} Vehículo
+          `;
         }
       });
     },
@@ -660,8 +810,7 @@ export async function renderVehiculos(container, cliente_id, onClose) {
     });
   }
 
-  // Exponer funciones para el HTML
-  window.ui = ui;
+  // Event listeners están configurados internamente, no necesitamos exponer ui globalmente
 
   // Inicialización
   setupEventListeners();
@@ -888,12 +1037,18 @@ export async function renderVehiculosGlobal(container) {
     actualizarListaGlobal();
   });
 
-  // Funciones globales para HTML
+  // Funciones globales para HTML (utilizadas en renderVehiculosGlobal)
   window.editarVehiculoGlobal = (id) => {
-    console.log('Editar vehículo:', id);
+    console.log('Editar vehículo global:', id);
+    // TODO: Implementar edición para vista global
+    alert('Función de edición global en desarrollo');
   };
 
   window.eliminarVehiculoGlobal = (id) => {
-    console.log('Eliminar vehículo:', id);
+    console.log('Eliminar vehículo global:', id);
+    // TODO: Implementar eliminación para vista global
+    if (confirm('¿Está seguro de que desea eliminar este vehículo?')) {
+      alert('Función de eliminación global en desarrollo');
+    }
   };
 }

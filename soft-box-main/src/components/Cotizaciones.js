@@ -585,7 +585,7 @@ export async function renderCotizaciones(container, usuario_id) {
         const ventaData = {
           cliente_id: cotizacion.cliente_id,
           usuario_id: usuario_id,
-          metodo_pago: 'efectivo', // Por defecto
+          metodo_pago: cotizacion.metodo_pago || 'efectivo', // Usar el método seleccionado o efectivo por defecto
           total: cotizacion.total,
           descuento: cotizacion.descuento || 0,
           observaciones: `Convertida desde cotización ${cotizacion.numero_cotizacion}`
@@ -1044,6 +1044,17 @@ export async function renderCotizaciones(container, usuario_id) {
               <label class="block text-sm font-medium text-gray-700 mb-2">Tiempo de Entrega</label>
               <input type="text" id="tiempo-entrega" value="${cotizacion?.tiempo_entrega || ''}" placeholder="Ej: 5-7 días hábiles" 
                 class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Método de Pago (si se convierte a venta)</label>
+              <select id="metodo-pago-cotizacion" 
+                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                <option value="efectivo" ${cotizacion?.metodo_pago === 'efectivo' ? 'selected' : ''}>Efectivo</option>
+                <option value="crédito" ${cotizacion?.metodo_pago === 'crédito' ? 'selected' : ''}>Tarjeta de Crédito</option>
+                <option value="débito" ${cotizacion?.metodo_pago === 'débito' ? 'selected' : ''}>Tarjeta de Débito</option>
+                <option value="cheque" ${cotizacion?.metodo_pago === 'cheque' ? 'selected' : ''}>Cheque</option>
+              </select>
             </div>
           </div>
           
@@ -1513,7 +1524,7 @@ export async function renderCotizaciones(container, usuario_id) {
 
         // Validar que cada producto tenga cantidad y precio válidos
         const productosInvalidos = cotizacionesState.detalles.filter(detalle => 
-          !detalle.cantidad || detalle.cantidad <= 0 || !detalle.precio || detalle.precio <= 0
+          !detalle.cantidad || detalle.cantidad <= 0 || !detalle.precio_unitario || detalle.precio_unitario <= 0
         );
 
         if (productosInvalidos.length > 0) {
@@ -1547,6 +1558,7 @@ export async function renderCotizaciones(container, usuario_id) {
           tiempo_entrega: document.getElementById('tiempo-entrega').value || null,
           observaciones: document.getElementById('observaciones').value || null,
           condiciones_pago: document.getElementById('condiciones-pago').value || null,
+          metodo_pago: document.getElementById('metodo-pago-cotizacion').value,
           subtotal: cotizacionesState.detalles.reduce((sum, d) => sum + (d.subtotal || 0), 0),
           descuento: parseFloat(document.getElementById('descuento-cotizacion').value || 0),
           impuestos: parseFloat(document.getElementById('impuestos-cotizacion').value || 0),
@@ -1929,6 +1941,7 @@ export async function renderCotizaciones(container, usuario_id) {
         document.getElementById('tiempo-entrega').value = nuevaCotizacion.tiempo_entrega || '';
         document.getElementById('observaciones').value = nuevaCotizacion.observaciones || '';
         document.getElementById('condiciones-pago').value = nuevaCotizacion.condiciones_pago || '';
+        document.getElementById('metodo-pago-cotizacion').value = nuevaCotizacion.metodo_pago || 'efectivo';
         document.getElementById('descuento-cotizacion').value = nuevaCotizacion.descuento || 0;
         document.getElementById('impuestos-cotizacion').value = nuevaCotizacion.impuestos || 0;
         
@@ -2178,6 +2191,7 @@ export async function renderCotizaciones(container, usuario_id) {
         document.getElementById('tiempo-entrega').value = cotizacion.tiempo_entrega || '';
         document.getElementById('observaciones').value = cotizacion.observaciones || '';
         document.getElementById('condiciones-pago').value = cotizacion.condiciones_pago || '';
+        document.getElementById('metodo-pago-cotizacion').value = cotizacion.metodo_pago || 'efectivo';
         document.getElementById('descuento-cotizacion').value = cotizacion.descuento || 0;
         document.getElementById('impuestos-cotizacion').value = cotizacion.impuestos || 0;
         
