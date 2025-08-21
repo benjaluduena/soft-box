@@ -86,7 +86,71 @@ const inventarioUtils = {
     if (producto.stock < 0) errores.push('El stock no puede ser negativo');
     if (producto.margen < 0 || producto.margen > 10) errores.push('El margen debe estar entre 0% y 1000%');
     
+    // Validaciones específicas para neumáticos
+    if (producto.tipo === 'neumático') {
+      if (!producto.ancho || producto.ancho < 125 || producto.ancho > 355) {
+        errores.push('El ancho debe estar entre 125 y 355 mm');
+      }
+      if (!producto.perfil || producto.perfil < 25 || producto.perfil > 95) {
+        errores.push('El perfil debe estar entre 25 y 95');
+      }
+      if (!producto.aro || producto.aro < 12 || producto.aro > 24) {
+        errores.push('El aro debe estar entre 12 y 24 pulgadas');
+      }
+      if (!producto.indice_carga) {
+        errores.push('El índice de carga es obligatorio para neumáticos');
+      }
+      if (!producto.codigo_velocidad) {
+        errores.push('El código de velocidad es obligatorio para neumáticos');
+      }
+    }
+    
     return errores;
+  },
+
+  // Nuevas utilidades para neumáticos
+  medidas: {
+    anchos: [125, 135, 145, 155, 165, 175, 185, 195, 205, 215, 225, 235, 245, 255, 265, 275, 285, 295, 305, 315, 325, 335, 345, 355],
+    perfiles: [25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95],
+    aros: [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    codigosVelocidad: [
+      { codigo: 'L', velocidad: '120 km/h' },
+      { codigo: 'M', velocidad: '130 km/h' },
+      { codigo: 'N', velocidad: '140 km/h' },
+      { codigo: 'P', velocidad: '150 km/h' },
+      { codigo: 'Q', velocidad: '160 km/h' },
+      { codigo: 'R', velocidad: '170 km/h' },
+      { codigo: 'S', velocidad: '180 km/h' },
+      { codigo: 'T', velocidad: '190 km/h' },
+      { codigo: 'U', velocidad: '200 km/h' },
+      { codigo: 'H', velocidad: '210 km/h' },
+      { codigo: 'V', velocidad: '240 km/h' },
+      { codigo: 'W', velocidad: '270 km/h' },
+      { codigo: 'Y', velocidad: '300 km/h' },
+      { codigo: 'ZR', velocidad: '+240 km/h' }
+    ],
+    tiposNeumatico: ['verano', 'invierno', 'all_season', 'performance']
+  },
+
+  generarMedidaCompleta: (ancho, perfil, aro) => {
+    if (!ancho || !perfil || !aro) return '';
+    return `${ancho}/${perfil}R${aro}`;
+  },
+
+  buscarMedidasSimilares: (ancho, perfil, aro) => {
+    const medidas = [];
+    // Variaciones de ancho ±10mm
+    [ancho - 10, ancho, ancho + 10].forEach(a => {
+      if (a >= 125 && a <= 355) {
+        // Variaciones de perfil ±5
+        [perfil - 5, perfil, perfil + 5].forEach(p => {
+          if (p >= 25 && p <= 95) {
+            medidas.push(`${a}/${p}R${aro}`);
+          }
+        });
+      }
+    });
+    return [...new Set(medidas)];
   },
 
   exportarExcel: (productos) => {
@@ -206,11 +270,42 @@ export async function renderInventario(container) {
                 <input 
                   type="text" 
                   id="buscar-producto" 
-                  placeholder="Buscar por nombre, marca o tipo..." 
+                  placeholder="Buscar por nombre, marca, tipo o medida (ej: 195/65R15)..." 
                   class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200"
                 />
               </div>
             </div>
+            
+            <!-- Filtros específicos para neumáticos -->
+            <div class="flex gap-2">
+              <select 
+                id="filtro-tipo" 
+                class="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
+              >
+                <option value="">Todos los tipos</option>
+                <option value="neumático">Neumáticos</option>
+                <option value="repuesto">Repuestos</option>
+                <option value="aceite">Aceites</option>
+                <option value="servicio">Servicios</option>
+              </select>
+              
+              <select 
+                id="filtro-aro" 
+                class="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm hidden"
+              >
+                <option value="">Todos los aros</option>
+              </select>
+              
+              <select 
+                id="filtro-estado" 
+                class="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
+              >
+                <option value="">Todos los productos</option>
+                <option value="activo">Solo activos</option>
+                <option value="inactivo">Solo inactivos</option>
+              </select>
+            </div>
+            
             <button 
               id="nuevo-producto" 
               class="group relative overflow-hidden bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
@@ -228,9 +323,10 @@ export async function renderInventario(container) {
         <div id="productos-lista" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"></div>
 
         <!-- Modal -->
-        <div id="producto-form-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden">
-          <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
-            <div class="flex items-center justify-between mb-6">
+        <div id="producto-form-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden p-4">
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
+            <!-- Header fijo -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 class="text-2xl font-bold text-gray-800" id="modal-title">Nuevo Producto</h3>
               <button id="cerrar-modal" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,7 +334,10 @@ export async function renderInventario(container) {
                 </svg>
               </button>
             </div>
-            <form id="producto-form" class="space-y-4">
+            
+            <!-- Contenido con scroll -->
+            <div class="flex-1 overflow-y-auto p-6">
+              <form id="producto-form" class="space-y-4">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Nombre del producto</label>
@@ -254,6 +353,7 @@ export async function renderInventario(container) {
                   <select 
                     name="tipo" 
                     required 
+                    id="tipo-producto"
                     class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200"
                   >
                     <option value="">Selecciona el tipo</option>
@@ -262,6 +362,105 @@ export async function renderInventario(container) {
                     <option value="aceite">Aceite</option>
                     <option value="servicio">Servicio</option>
                   </select>
+                </div>
+              </div>
+
+              <!-- Campos específicos para neumáticos -->
+              <div id="campos-neumaticos" class="hidden space-y-4 bg-blue-50 p-4 rounded-xl border border-blue-200">
+                <h4 class="text-lg font-semibold text-blue-800 mb-3">Especificaciones del Neumático</h4>
+                
+                <div class="grid grid-cols-3 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ancho (mm)</label>
+                    <select 
+                      name="ancho" 
+                      class="w-full px-4 py-3 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="">Selecciona</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Perfil</label>
+                    <select 
+                      name="perfil" 
+                      class="w-full px-4 py-3 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="">Selecciona</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Aro (R)</label>
+                    <select 
+                      name="aro" 
+                      class="w-full px-4 py-3 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="">Selecciona</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Índice de Carga</label>
+                    <input 
+                      name="indice_carga" 
+                      placeholder="Ej: 91, 95, 99..." 
+                      class="w-full px-4 py-3 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Código de Velocidad</label>
+                    <select 
+                      name="codigo_velocidad" 
+                      class="w-full px-4 py-3 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="">Selecciona</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Neumático</label>
+                    <select 
+                      name="tipo_neumatico" 
+                      class="w-full px-4 py-3 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="">Selecciona</option>
+                      <option value="verano">Verano</option>
+                      <option value="invierno">Invierno</option>
+                      <option value="all_season">All Season</option>
+                      <option value="performance">Performance</option>
+                    </select>
+                  </div>
+                  <div class="flex items-center gap-4 pt-6">
+                    <label class="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        name="reforzado" 
+                        class="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span class="text-sm text-gray-700">Reforzado</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        name="runflat" 
+                        class="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span class="text-sm text-gray-700">Run Flat</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Medida Completa (generada automáticamente)</label>
+                  <input 
+                    name="medida_completa" 
+                    readonly 
+                    placeholder="Se generará automáticamente"
+                    class="w-full px-4 py-3 border border-blue-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
+                  />
                 </div>
               </div>
               
@@ -292,6 +491,21 @@ export async function renderInventario(container) {
                 >
                   <option value="">Selecciona un proveedor</option>
                 </select>
+              </div>
+              
+              <!-- Botón para buscar medidas similares (solo para neumáticos) -->
+              <div id="medidas-similares" class="hidden">
+                <button 
+                  type="button" 
+                  id="buscar-similares" 
+                  class="w-full bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-blue-200"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                  Buscar Medidas Similares
+                </button>
+                <div id="resultado-similares" class="mt-2 text-sm text-gray-600 hidden"></div>
               </div>
               
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -330,9 +544,16 @@ export async function renderInventario(container) {
                 </div>
               </div>
               
-              <div class="flex gap-3 pt-4">
+              </form>
+              <div id="producto-form-error" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm hidden"></div>
+            </div>
+            
+            <!-- Footer fijo con botones -->
+            <div class="border-t border-gray-200 p-6 bg-gray-50 rounded-b-2xl">
+              <div class="flex gap-3">
                 <button 
-                  type="submit" 
+                  type="button" 
+                  id="guardar-producto" 
                   class="flex-1 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -348,8 +569,7 @@ export async function renderInventario(container) {
                   Cancelar
                 </button>
               </div>
-            </form>
-            <div id="producto-form-error" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm hidden"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -361,11 +581,44 @@ export async function renderInventario(container) {
   const modal = document.getElementById('producto-form-modal');
   const modalContent = document.getElementById('modal-content');
 
-  async function cargarProductos(filtro = '') {
+  async function cargarProductos(filtro = '', tipoFiltro = '', aroFiltro = '', estadoFiltro = '') {
     let query = supabase.from('productos').select('*,proveedores(nombre,margen_ganancia)').order('created_at', { ascending: false });
+    
+    // Aplicar filtros
     if (filtro) {
-      query = query.or(`nombre.ilike.%${filtro}%,marca.ilike.%${filtro}%,tipo.ilike.%${filtro}%`);
+      // Búsqueda por medida específica para neumáticos (ej: 195/65R15)
+      const medidaRegex = /^(\d{3})\/(\d{2})R(\d{2})$/;
+      const match = filtro.match(medidaRegex);
+      
+      if (match) {
+        // Búsqueda específica por medida de neumático
+        query = query.or(`especificaciones->>'medida_completa'.ilike.%${filtro}%,nombre.ilike.%${filtro}%`);
+      } else {
+        // Búsqueda general
+        query = query.or(`nombre.ilike.%${filtro}%,marca.ilike.%${filtro}%,tipo.ilike.%${filtro}%,especificaciones->>'medida_completa'.ilike.%${filtro}%`);
+      }
     }
+    
+    if (tipoFiltro) {
+      query = query.eq('tipo', tipoFiltro);
+    }
+    
+    if (aroFiltro) {
+      query = query.eq('especificaciones->aro', aroFiltro);
+    }
+    
+    // Filtro de estado (activo/inactivo)
+    if (estadoFiltro === 'activo') {
+      query = query.eq('activo', true);
+    } else if (estadoFiltro === 'inactivo') {
+      query = query.eq('activo', false);
+    } else {
+      // Por defecto mostrar solo activos si no se especifica filtro
+      if (!estadoFiltro) {
+        query = query.eq('activo', true);
+      }
+    }
+    
     const { data, error } = await query;
     
     if (error) {
@@ -422,29 +675,63 @@ export async function renderInventario(container) {
       };
       const statusColor = statusColors[stockStatus];
       
+      // Información específica de neumáticos
+      const esNeumatico = prod.tipo === 'neumático';
+      const spec = prod.especificaciones || {};
+      
+      // Estilo para productos inactivos
+      const esInactivo = prod.activo === false;
+      const estiloInactivo = esInactivo ? 'opacity-60 grayscale' : '';
+      
       return `
-        <div class="group bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 hover:scale-105 ${stockStatus === 'sin-stock' ? 'ring-2 ring-red-300' : stockStatus === 'stock-bajo' ? 'ring-2 ring-amber-300' : ''}">
+        <div class="group bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 hover:scale-105 ${stockStatus === 'sin-stock' ? 'ring-2 ring-red-300' : stockStatus === 'stock-bajo' ? 'ring-2 ring-amber-300' : ''} ${estiloInactivo}">
           <div class="flex items-start justify-between mb-4">
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-2">
-                <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center">
-                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                  </svg>
+                <div class="w-12 h-12 bg-gradient-to-br ${esNeumatico ? 'from-blue-500 to-indigo-600' : 'from-emerald-500 to-green-600'} rounded-xl flex items-center justify-center">
+                  ${esNeumatico ? 
+                    `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <circle cx="12" cy="12" r="6"></circle>
+                      <circle cx="12" cy="12" r="2"></circle>
+                    </svg>` :
+                    `<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>`
+                  }
                 </div>
                 <div class="flex-1">
                   <h3 class="text-xl font-bold text-gray-800 group-hover:text-emerald-600 transition-colors">${prod.nombre}</h3>
-                  <div class="flex items-center gap-2 mt-1">
+                  ${esNeumatico && spec.medida_completa ? 
+                    `<div class="text-lg font-bold text-blue-600 mb-1">${spec.medida_completa}</div>` : ''
+                  }
+                  <div class="flex items-center gap-2 mt-1 flex-wrap">
                     <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">${prod.tipo}</span>
                     ${prod.marca ? `<span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">${prod.marca}</span>` : ''}
-                    <span class="px-2 py-1 ${statusColor} text-xs font-semibold rounded-full">
-                      ${stockStatus === 'sin-stock' ? 'Sin Stock' : stockStatus === 'stock-bajo' ? 'Stock Bajo' : 'Stock OK'}
-                    </span>
+                    ${esNeumatico && spec.tipo_neumatico ? `<span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">${spec.tipo_neumatico}</span>` : ''}
+                    ${esNeumatico && spec.codigo_velocidad ? `<span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">${spec.codigo_velocidad}</span>` : ''}
+                    ${esInactivo ? 
+                      '<span class="px-2 py-1 bg-gray-200 text-gray-700 text-xs font-semibold rounded-full">INACTIVO</span>' :
+                      `<span class="px-2 py-1 ${statusColor} text-xs font-semibold rounded-full">
+                        ${stockStatus === 'sin-stock' ? 'Sin Stock' : stockStatus === 'stock-bajo' ? 'Stock Bajo' : 'Stock OK'}
+                      </span>`
+                    }
                   </div>
                 </div>
               </div>
               
               <div class="space-y-2">
+                ${esNeumatico && spec.indice_carga ? `
+                  <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Índice de Carga: ${spec.indice_carga}
+                    ${spec.reforzado ? '<span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full ml-2">Reforzado</span>' : ''}
+                    ${spec.runflat ? '<span class="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full ml-2">Run Flat</span>' : ''}
+                  </div>
+                ` : ''}
+                
                 ${prod.compatible_con ? `
                   <div class="flex items-center gap-2 text-sm text-gray-600">
                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -495,15 +782,26 @@ export async function renderInventario(container) {
               </svg>
               Editar
             </button>
-            <button 
-              data-id="${prod.id}" 
-              class="eliminar-producto bg-gradient-to-r from-red-50 to-pink-50 hover:from-red-100 hover:to-pink-100 text-red-700 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-              </svg>
-              Eliminar
-            </button>
+            ${esInactivo ? 
+              `<button 
+                data-id="${prod.id}" 
+                class="reactivar-producto bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 text-green-700 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Reactivar
+              </button>` :
+              `<button 
+                data-id="${prod.id}" 
+                class="eliminar-producto bg-gradient-to-r from-red-50 to-pink-50 hover:from-red-100 hover:to-pink-100 text-red-700 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                Eliminar
+              </button>`
+            }
           </div>
         </div>
       `;
@@ -515,6 +813,9 @@ export async function renderInventario(container) {
     });
     document.querySelectorAll('.eliminar-producto').forEach(btn => {
       btn.onclick = () => eliminarProducto(btn.dataset.id);
+    });
+    document.querySelectorAll('.reactivar-producto').forEach(btn => {
+      btn.onclick = () => reactivarProducto(btn.dataset.id);
     });
   }
 
@@ -530,8 +831,58 @@ export async function renderInventario(container) {
     document.getElementById('valor-total').textContent = `$${valorTotal.toFixed(2)}`;
   }
 
-  buscarInput.oninput = () => cargarProductos(buscarInput.value);
+  // Event listeners para filtros
+  buscarInput.oninput = () => aplicarFiltros();
+  document.getElementById('filtro-tipo').onchange = () => aplicarFiltros();
+  document.getElementById('filtro-aro').onchange = () => aplicarFiltros();
+  document.getElementById('filtro-estado').onchange = () => aplicarFiltros();
   document.getElementById('nuevo-producto').onclick = () => mostrarFormProducto();
+
+  function aplicarFiltros() {
+    const filtro = buscarInput.value;
+    const tipoFiltro = document.getElementById('filtro-tipo').value;
+    const aroFiltro = document.getElementById('filtro-aro').value;
+    const estadoFiltro = document.getElementById('filtro-estado').value;
+    
+    // Mostrar/ocultar filtro de aro según el tipo seleccionado
+    const filtroAro = document.getElementById('filtro-aro');
+    if (tipoFiltro === 'neumático') {
+      filtroAro.classList.remove('hidden');
+      if (filtroAro.innerHTML === '<option value="">Todos los aros</option>') {
+        // Llenar opciones de aro
+        inventarioUtils.medidas.aros.forEach(aro => {
+          const option = document.createElement('option');
+          option.value = aro;
+          option.textContent = `R${aro}`;
+          filtroAro.appendChild(option);
+        });
+      }
+    } else {
+      filtroAro.classList.add('hidden');
+      filtroAro.value = '';
+    }
+    
+    cargarProductos(filtro, tipoFiltro, aroFiltro, estadoFiltro);
+  }
+
+  async function reactivarProducto(id) {
+    if (confirm('¿Estás seguro de que quieres reactivar este producto?')) {
+      const { error } = await supabase
+        .from('productos')
+        .update({ activo: true })
+        .eq('id', id);
+      
+      if (error) {
+        inventarioUtils.mostrarNotificacion(
+          'Error al reactivar el producto: ' + error.message, 
+          'error'
+        );
+      } else {
+        inventarioUtils.mostrarNotificacion('Producto reactivado exitosamente', 'exito');
+        aplicarFiltros();
+      }
+    }
+  }
 
   async function mostrarFormProducto(id) {
     let producto = { nombre: '', tipo: '', marca: '', compatible_con: '', proveedor_id: '', stock: 0, costo: 0, margen: 0.3 };
@@ -555,6 +906,9 @@ export async function renderInventario(container) {
     form.stock.value = producto.stock || 0;
     form.costo.value = producto.costo || 0;
     form.margen.value = ((producto.margen || 0.3) * 100).toFixed(0);
+    
+    // Configurar campos específicos de neumáticos
+    configurarCamposNeumaticos(form, producto);
     
     // Fill proveedores select
     const proveedorSelect = form.proveedor_id;
@@ -581,9 +935,9 @@ export async function renderInventario(container) {
     const onKey = (e) => { if (e.key === 'Escape') cerrarModal(); };
     document.addEventListener('keydown', onKey, { once: true });
     
-    document.getElementById('producto-form').onsubmit = async (e) => {
-      e.preventDefault();
-      const form = e.target;
+    // Manejar envío del formulario con el botón externo
+    const manejarGuardar = async () => {
+      const form = document.getElementById('producto-form');
       const nuevo = {
         nombre: form.nombre.value,
         tipo: form.tipo.value,
@@ -594,8 +948,34 @@ export async function renderInventario(container) {
         costo: parseFloat(form.costo.value),
         margen: parseFloat(form.margen.value) / 100
       };
+
+      // Agregar especificaciones de neumáticos
+      if (form.tipo.value === 'neumático') {
+        nuevo.especificaciones = {
+          ancho: parseInt(form.ancho.value) || null,
+          perfil: parseInt(form.perfil.value) || null,
+          aro: parseInt(form.aro.value) || null,
+          indice_carga: form.indice_carga.value || null,
+          codigo_velocidad: form.codigo_velocidad.value || null,
+          tipo_neumatico: form.tipo_neumatico.value || null,
+          reforzado: form.reforzado.checked,
+          runflat: form.runflat.checked,
+          medida_completa: form.medida_completa.value || null
+        };
+      }
       
+      // Validar producto
+      const errores = inventarioUtils.validarProducto(nuevo);
       const errorDiv = document.getElementById('producto-form-error');
+      
+      if (errores.length > 0) {
+        errorDiv.innerHTML = errores.map(error => `• ${error}`).join('<br>');
+        errorDiv.classList.remove('hidden');
+        // Hacer scroll hasta el error
+        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+      }
+      
       let res;
       
       if (id) {
@@ -607,10 +987,22 @@ export async function renderInventario(container) {
       if (res.error) {
         errorDiv.textContent = res.error.message;
         errorDiv.classList.remove('hidden');
+        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else {
+        inventarioUtils.mostrarNotificacion(
+          id ? 'Producto actualizado exitosamente' : 'Producto creado exitosamente', 
+          'exito'
+        );
         cerrarModal();
         cargarProductos(buscarInput.value);
       }
+    };
+
+    // Conectar el botón de guardar y también permitir envío por Enter en el formulario
+    document.getElementById('guardar-producto').onclick = manejarGuardar;
+    document.getElementById('producto-form').onsubmit = (e) => {
+      e.preventDefault();
+      manejarGuardar();
     };
   }
 
@@ -623,12 +1015,242 @@ export async function renderInventario(container) {
   }
 
   async function eliminarProducto(id) {
-    if (!confirm('¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.')) return;
+    // Primero verificar si el producto tiene referencias
+    const verificarReferencias = async () => {
+      const checks = await Promise.all([
+        supabase.from('venta_detalle').select('id').eq('producto_id', id).limit(1),
+        supabase.from('compra_detalle').select('id').eq('producto_id', id).limit(1),
+        supabase.from('cotizacion_detalle').select('id').eq('producto_id', id).limit(1),
+        supabase.from('servicio_productos').select('id').eq('producto_id', id).limit(1)
+      ]);
+      
+      return checks.some(check => check.data && check.data.length > 0);
+    };
+
+    const tieneReferencias = await verificarReferencias();
     
-    const { error } = await supabase.from('productos').delete().eq('id', id);
-    if (!error) {
+    if (tieneReferencias) {
+      // Mostrar modal con opciones
+      const resultado = await mostrarModalEliminacion(id);
+      if (resultado === 'desactivar') {
+        await desactivarProducto(id);
+      }
+    } else {
+      // Eliminar directamente si no tiene referencias
+      if (confirm('¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.')) {
+        const { error } = await supabase.from('productos').delete().eq('id', id);
+        if (error) {
+          inventarioUtils.mostrarNotificacion(
+            'Error al eliminar el producto: ' + error.message, 
+            'error'
+          );
+        } else {
+          inventarioUtils.mostrarNotificacion('Producto eliminado exitosamente', 'exito');
+          cargarProductos(buscarInput.value);
+        }
+      }
+    }
+  }
+
+  async function desactivarProducto(id) {
+    const { error } = await supabase
+      .from('productos')
+      .update({ activo: false })
+      .eq('id', id);
+    
+    if (error) {
+      inventarioUtils.mostrarNotificacion(
+        'Error al desactivar el producto: ' + error.message, 
+        'error'
+      );
+    } else {
+      inventarioUtils.mostrarNotificacion('Producto desactivado exitosamente', 'exito');
       cargarProductos(buscarInput.value);
     }
+  }
+
+  function mostrarModalEliminacion(id) {
+    return new Promise((resolve) => {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+      modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-gray-800">No se puede eliminar</h3>
+              <p class="text-gray-600 text-sm">Este producto está siendo usado en ventas, compras o cotizaciones</p>
+            </div>
+          </div>
+          
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <h4 class="font-semibold text-blue-800 mb-2">¿Qué deseas hacer?</h4>
+            <p class="text-blue-700 text-sm mb-3">Puedes desactivar el producto para que no aparezca en nuevas transacciones, pero mantendrá el historial existente.</p>
+          </div>
+          
+          <div class="flex gap-3">
+            <button 
+              id="btn-desactivar" 
+              class="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold px-4 py-2 rounded-xl transition-all duration-300"
+            >
+              Desactivar Producto
+            </button>
+            <button 
+              id="btn-cancelar" 
+              class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-xl transition-all duration-300"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      const btnDesactivar = modal.querySelector('#btn-desactivar');
+      const btnCancelar = modal.querySelector('#btn-cancelar');
+      
+      btnDesactivar.onclick = () => {
+        document.body.removeChild(modal);
+        resolve('desactivar');
+      };
+      
+      btnCancelar.onclick = () => {
+        document.body.removeChild(modal);
+        resolve('cancelar');
+      };
+      
+      // Cerrar con clic fuera
+      modal.onclick = (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+          resolve('cancelar');
+        }
+      };
+    });
+  }
+
+  // Funciones para manejo de neumáticos
+  function configurarCamposNeumaticos(form, producto = {}) {
+    const tipoSelect = form.tipo;
+    const camposNeumaticos = document.getElementById('campos-neumaticos');
+    
+    // Toggle de campos de neumáticos
+    const toggleCamposNeumaticos = () => {
+      if (tipoSelect.value === 'neumático') {
+        camposNeumaticos.classList.remove('hidden');
+        document.getElementById('medidas-similares').classList.remove('hidden');
+        llenarSelectsNeumaticos(form);
+      } else {
+        camposNeumaticos.classList.add('hidden');
+        document.getElementById('medidas-similares').classList.add('hidden');
+      }
+    };
+    
+    tipoSelect.addEventListener('change', toggleCamposNeumaticos);
+    toggleCamposNeumaticos();
+    
+    // Rellenar campos específicos de neumáticos si existe producto
+    if (producto.especificaciones) {
+      const spec = producto.especificaciones;
+      if (spec.ancho) form.ancho.value = spec.ancho;
+      if (spec.perfil) form.perfil.value = spec.perfil;
+      if (spec.aro) form.aro.value = spec.aro;
+      if (spec.indice_carga) form.indice_carga.value = spec.indice_carga;
+      if (spec.codigo_velocidad) form.codigo_velocidad.value = spec.codigo_velocidad;
+      if (spec.tipo_neumatico) form.tipo_neumatico.value = spec.tipo_neumatico;
+      if (spec.reforzado) form.reforzado.checked = spec.reforzado;
+      if (spec.runflat) form.runflat.checked = spec.runflat;
+    }
+  }
+  
+  function llenarSelectsNeumaticos(form) {
+    // Llenar select de anchos
+    const anchoSelect = form.ancho;
+    anchoSelect.innerHTML = '<option value="">Selecciona</option>';
+    inventarioUtils.medidas.anchos.forEach(ancho => {
+      const option = document.createElement('option');
+      option.value = ancho;
+      option.textContent = ancho;
+      anchoSelect.appendChild(option);
+    });
+    
+    // Llenar select de perfiles
+    const perfilSelect = form.perfil;
+    perfilSelect.innerHTML = '<option value="">Selecciona</option>';
+    inventarioUtils.medidas.perfiles.forEach(perfil => {
+      const option = document.createElement('option');
+      option.value = perfil;
+      option.textContent = perfil;
+      perfilSelect.appendChild(option);
+    });
+    
+    // Llenar select de aros
+    const aroSelect = form.aro;
+    aroSelect.innerHTML = '<option value="">Selecciona</option>';
+    inventarioUtils.medidas.aros.forEach(aro => {
+      const option = document.createElement('option');
+      option.value = aro;
+      option.textContent = aro;
+      aroSelect.appendChild(option);
+    });
+    
+    // Llenar select de códigos de velocidad
+    const velocidadSelect = form.codigo_velocidad;
+    velocidadSelect.innerHTML = '<option value="">Selecciona</option>';
+    inventarioUtils.medidas.codigosVelocidad.forEach(codigo => {
+      const option = document.createElement('option');
+      option.value = codigo.codigo;
+      option.textContent = `${codigo.codigo} (${codigo.velocidad})`;
+      velocidadSelect.appendChild(option);
+    });
+    
+    // Event listeners para generar medida completa automáticamente
+    const actualizarMedidaCompleta = () => {
+      const ancho = form.ancho.value;
+      const perfil = form.perfil.value;
+      const aro = form.aro.value;
+      const medidaCompleta = inventarioUtils.generarMedidaCompleta(ancho, perfil, aro);
+      form.medida_completa.value = medidaCompleta;
+      
+      if (medidaCompleta) {
+        form.nombre.value = `Neumático ${medidaCompleta} ${form.marca.value || ''}`.trim();
+      }
+    };
+    
+    anchoSelect.addEventListener('change', actualizarMedidaCompleta);
+    perfilSelect.addEventListener('change', actualizarMedidaCompleta);
+    aroSelect.addEventListener('change', actualizarMedidaCompleta);
+    form.marca.addEventListener('input', actualizarMedidaCompleta);
+    
+    // Funcionalidad para buscar medidas similares
+    document.getElementById('buscar-similares').addEventListener('click', () => {
+      const ancho = parseInt(form.ancho.value);
+      const perfil = parseInt(form.perfil.value);
+      const aro = parseInt(form.aro.value);
+      
+      if (ancho && perfil && aro) {
+        const medidasSimilares = inventarioUtils.buscarMedidasSimilares(ancho, perfil, aro);
+        const resultadoDiv = document.getElementById('resultado-similares');
+        
+        resultadoDiv.innerHTML = `
+          <p class="font-semibold text-blue-700 mb-2">Medidas compatibles encontradas:</p>
+          <div class="flex flex-wrap gap-1">
+            ${medidasSimilares.map(medida => 
+              `<span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full cursor-pointer hover:bg-blue-200 transition-colors" 
+                     onclick="alert('Buscar productos con medida: ${medida}')">${medida}</span>`
+            ).join('')}
+          </div>
+        `;
+        resultadoDiv.classList.remove('hidden');
+      } else {
+        inventarioUtils.mostrarNotificacion('Selecciona ancho, perfil y aro para buscar medidas similares', 'alerta');
+      }
+    });
   }
 
   cargarProductos();
