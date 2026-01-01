@@ -90,20 +90,8 @@ export async function renderVentas(container, usuario_id) {
             
             <div class="flex items-center gap-4">
               <div class="text-right text-sm">
-                <div class="text-gray-600">Usuario:</div>
-                <div class="font-semibold text-gray-800">${usuario_id}</div>
                 <div id="hora-actual" class="text-xs text-gray-500"></div>
               </div>
-              <button id="btn-refrescar-datos" class="p-3 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all duration-200 shadow-md hover:shadow-lg" title="Refrescar datos">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-              </button>
-              <button id="btn-diagnostico" class="p-3 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-all duration-200 shadow-md hover:shadow-lg" title="Ejecutar diagnóstico">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-              </button>
             </div>
           </div>
           
@@ -120,7 +108,6 @@ export async function renderVentas(container, usuario_id) {
               <div><kbd class="px-2 py-1 bg-white rounded border shadow-sm">F2</kbd> Buscar</div>
               <div><kbd class="px-2 py-1 bg-white rounded border shadow-sm">F3</kbd> Cliente</div>
               <div><kbd class="px-2 py-1 bg-white rounded border shadow-sm">F4</kbd> Historial</div>
-              <div><kbd class="px-2 py-1 bg-white rounded border shadow-sm">F5</kbd> Refrescar</div>
               <div><kbd class="px-2 py-1 bg-white rounded border shadow-sm">Ctrl+Enter</kbd> Vender</div>
             </div>
           </div>
@@ -529,7 +516,7 @@ export async function renderVentas(container, usuario_id) {
               <div class="p-4 border-b border-gray-100">
                 <div class="flex items-center justify-between">
                   <h3 class="text-lg font-semibold text-gray-800">Historial Reciente</h3>
-                  <button id="ver-todo-historial" class="text-sm text-blue-600 hover:text-blue-800">Ver todo</button>
+                  <button id="ver-todo-historial" onclick="verHistorialCompleto()" class="text-sm text-blue-600 hover:text-blue-800">Ver todo</button>
                 </div>
               </div>
               <div id="historial-ventas" class="p-4 max-h-80 overflow-y-auto">
@@ -605,6 +592,117 @@ export async function renderVentas(container, usuario_id) {
         </div>
       </div>
     </div>
+    
+    <!-- Modal de Historial Completo de Ventas -->
+    <div id="modal-historial-completo" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+      <div class="bg-white rounded-2xl w-full max-w-6xl mx-4 shadow-2xl max-h-[90vh] overflow-hidden">
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-800">Historial Completo de Ventas</h3>
+            </div>
+            <button id="cerrar-historial-completo" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Filtros del historial -->
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+              <select id="filtro-historial-cliente" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Todos los clientes</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
+              <select id="filtro-historial-metodo" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Todos</option>
+                <option value="efectivo">Efectivo</option>
+                <option value="débito">Débito</option>
+                <option value="crédito">Crédito</option>
+                <option value="cheque">Cheque</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+              <input type="date" id="filtro-historial-desde" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+              <input type="date" id="filtro-historial-hasta" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Monto Mínimo</label>
+              <input type="number" id="filtro-historial-monto-min" placeholder="$0.00" step="0.01" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
+            </div>
+            <div class="flex items-end">
+              <button id="aplicar-filtros-historial" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                Filtrar
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="p-6 max-h-[70vh] overflow-y-auto">
+          <div id="lista-historial-completo" class="space-y-4">
+            <!-- Se llena dinámicamente -->
+          </div>
+        </div>
+        
+        <div class="p-4 border-t border-gray-200 bg-gray-50">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+              Total de ventas: <span id="total-ventas-historial" class="font-bold">0</span> |
+              Monto total: <span id="monto-total-historial" class="font-bold text-green-600">$0.00</span> |
+              Promedio: <span id="promedio-historial" class="font-bold text-blue-600">$0.00</span>
+            </div>
+            <button id="exportar-historial" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+              Exportar CSV
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Detalle de Venta -->
+    <div id="modal-detalle-venta" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+      <div class="bg-white rounded-2xl w-full max-w-4xl mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-2xl font-bold text-gray-800">Detalle de Venta</h3>
+                <p class="text-gray-600" id="venta-numero">Venta #---</p>
+              </div>
+            </div>
+            <button id="cerrar-detalle-venta" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="p-6">
+          <div id="contenido-detalle-venta">
+            <!-- Se llena dinámicamente -->
+          </div>
+        </div>
+      </div>
+    </div>
   `;
 
   // API y funciones de datos
@@ -647,18 +745,40 @@ export async function renderVentas(container, usuario_id) {
         const hoy = new Date().toISOString().split('T')[0];
         
         // Ventas del día
-        const { data: ventasHoy } = await supabase
+        const { data: ventasHoy, error: errorVentas } = await supabase
           .from('ventas')
           .select('id, total, created_at')
           .gte('created_at', hoy + 'T00:00:00.000Z')
           .lt('created_at', hoy + 'T23:59:59.999Z');
         
-        // Productos vendidos hoy
-        const { data: productosVendidos } = await supabase
-          .from('venta_detalle')
-          .select('cantidad, ventas(created_at)')
-          .gte('ventas.created_at', hoy + 'T00:00:00.000Z')
-          .lt('ventas.created_at', hoy + 'T23:59:59.999Z');
+        if (errorVentas) {
+          console.warn('Error cargando ventas del día:', errorVentas);
+        }
+        
+        // Productos vendidos hoy - consulta simplificada como fallback
+        let productosVendidos = [];
+        try {
+          const { data, error } = await supabase
+            .from('venta_detalle')
+            .select(`
+              cantidad,
+              ventas!inner(created_at)
+            `)
+            .gte('ventas.created_at', hoy + 'T00:00:00.000Z')
+            .lt('ventas.created_at', hoy + 'T23:59:59.999Z');
+          
+          if (error) throw error;
+          productosVendidos = data || [];
+        } catch (error) {
+          console.warn('Error con join de productos vendidos, usando fallback:', error);
+          // Fallback: obtener todos los detalles de venta de hoy
+          const { data } = await supabase
+            .from('venta_detalle')
+            .select('cantidad, venta_id')
+            .gte('created_at', hoy + 'T00:00:00.000Z')
+            .lt('created_at', hoy + 'T23:59:59.999Z');
+          productosVendidos = data || [];
+        }
 
         // Actualizar UI
         const totalVentas = ventasHoy?.length || 0;
@@ -676,6 +796,7 @@ export async function renderVentas(container, usuario_id) {
 
       } catch (error) {
         console.error('Error cargando estadísticas:', error);
+        utils.showNotification('Error al cargar estadísticas', 'error');
       }
     },
 
@@ -686,7 +807,7 @@ export async function renderVentas(container, usuario_id) {
           .select(`
             id, total, metodo_pago, created_at,
             clientes(nombre),
-            profiles(nombre, apellido)
+            usuario:profiles!ventas_usuario_id_fkey(nombre, apellido)
           `)
           .order('created_at', { ascending: false })
           .limit(limite);
@@ -696,6 +817,7 @@ export async function renderVentas(container, usuario_id) {
         ui.actualizarHistorialVentas();
       } catch (error) {
         console.error('Error cargando historial:', error);
+        utils.showNotification('Error al cargar historial de ventas', 'error');
       }
     },
 
@@ -1272,17 +1394,6 @@ export async function renderVentas(container, usuario_id) {
     actualizarHora();
     setInterval(actualizarHora, 1000);
 
-    // Refrescar datos
-    document.getElementById('btn-refrescar-datos').addEventListener('click', async () => {
-      await cargarTodosLosDatos();
-      utils.showNotification('Datos actualizados', 'success');
-    });
-
-    // Ejecutar diagnóstico
-    document.getElementById('btn-diagnostico').addEventListener('click', async () => {
-      await diagnosticarSistema();
-      utils.showNotification('Diagnóstico ejecutado - revisa la consola', 'info');
-    });
 
     // Selección de cliente
     document.getElementById('select-cliente').addEventListener('change', (e) => {
@@ -1444,9 +1555,6 @@ export async function renderVentas(container, usuario_id) {
       } else if (e.key === 'F3') {
         e.preventDefault();
         document.getElementById('nuevo-cliente-btn').click();
-      } else if (e.key === 'F5') {
-        e.preventDefault();
-        document.getElementById('btn-refrescar-datos').click();
       } else if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         document.getElementById('confirmar-venta').click();
@@ -1467,69 +1575,16 @@ export async function renderVentas(container, usuario_id) {
   };
 
   window.verDetalleVenta = async (ventaId) => {
-    // Implementar modal de detalle de venta
-    console.log('Ver detalle de venta:', ventaId);
+    await mostrarDetalleVenta(ventaId);
+  };
+  
+  window.verHistorialCompleto = () => {
+    mostrarHistorialCompleto();
   };
 
-  // Función de diagnóstico para verificar autenticación y permisos
-  async function diagnosticarSistema() {
-    try {
-      console.log('=== DIAGNÓSTICO DEL SISTEMA ===');
-      
-      // Verificar autenticación
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      console.log('Usuario autenticado:', user ? user.id : 'No autenticado');
-      console.log('Error de auth:', authError);
-      
-      if (user) {
-        // Verificar perfil
-        const { data: perfil, error: perfilError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        
-        console.log('Perfil del usuario:', perfil);
-        console.log('Error de perfil:', perfilError);
-        
-        // Test de permisos básicos
-        const { data: testClientes, error: errorClientes } = await supabase
-          .from('clientes')
-          .select('id, nombre')
-          .limit(1);
-        
-        console.log('Test clientes:', testClientes);
-        console.log('Error clientes:', errorClientes);
-        
-        const { data: testProductos, error: errorProductos } = await supabase
-          .from('productos')
-          .select('id, nombre')
-          .limit(1);
-        
-        console.log('Test productos:', testProductos);
-        console.log('Error productos:', errorProductos);
-        
-        // Verificar estado actual
-        console.log('Estado actual del sistema:');
-        console.log('- Cliente seleccionado:', state.clienteSeleccionado);
-        console.log('- Método de pago:', state.metodoPago);
-        console.log('- Plazo cheque:', state.plazoCheque, 'días');
-        console.log('- Descuento:', state.descuento, '%');
-        console.log('- Carrito:', state.carrito.length, 'productos');
-        console.log('- Productos en carrito:', state.carrito);
-      }
-      
-      console.log('=== FIN DIAGNÓSTICO ===');
-    } catch (error) {
-      console.error('Error en diagnóstico:', error);
-    }
-  }
 
   // Cargar datos iniciales
   async function cargarTodosLosDatos() {
-    // Ejecutar diagnóstico primero
-    await diagnosticarSistema();
-    
     await Promise.all([
       api.cargarClientes(),
       api.cargarProductos(),
@@ -1548,7 +1603,513 @@ export async function renderVentas(container, usuario_id) {
     document.getElementById('numero-venta').textContent = numeroVenta;
   }
 
+  // Funciones para modales
+  async function mostrarHistorialCompleto() {
+    const modal = document.getElementById('modal-historial-completo');
+    modal.classList.remove('hidden');
+    
+    // Llenar filtro de clientes
+    const selectCliente = document.getElementById('filtro-historial-cliente');
+    selectCliente.innerHTML = '<option value="">Todos los clientes</option>' +
+      state.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+    
+    // Cargar historial completo inicial
+    await cargarHistorialCompleto();
+  }
+  
+  async function cargarHistorialCompleto(filtros = {}) {
+    try {
+      let query = supabase
+        .from('ventas')
+        .select(`
+          *,
+          clientes(nombre, telefono, email),
+          usuario:profiles!ventas_usuario_id_fkey(nombre, apellido),
+          vendedor:profiles!ventas_vendedor_id_fkey(nombre, apellido)
+        `)
+        .order('created_at', { ascending: false });
+      
+      // Aplicar filtros
+      if (filtros.cliente) {
+        query = query.eq('cliente_id', filtros.cliente);
+      }
+      
+      if (filtros.metodo) {
+        query = query.eq('metodo_pago', filtros.metodo);
+      }
+      
+      if (filtros.desde) {
+        query = query.gte('created_at', filtros.desde + 'T00:00:00.000Z');
+      }
+      
+      if (filtros.hasta) {
+        query = query.lte('created_at', filtros.hasta + 'T23:59:59.999Z');
+      }
+      
+      if (filtros.montoMin) {
+        query = query.gte('total', parseFloat(filtros.montoMin));
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      const ventas = data || [];
+      
+      // Actualizar resumen
+      document.getElementById('total-ventas-historial').textContent = ventas.length;
+      const montoTotal = ventas.reduce((sum, v) => sum + (parseFloat(v.total) || 0), 0);
+      const promedio = ventas.length > 0 ? montoTotal / ventas.length : 0;
+      document.getElementById('monto-total-historial').textContent = utils.formatCurrency(montoTotal);
+      document.getElementById('promedio-historial').textContent = utils.formatCurrency(promedio);
+      
+      // Renderizar lista
+      const container = document.getElementById('lista-historial-completo');
+      
+      if (ventas.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">No se encontraron ventas</h3>
+            <p class="text-gray-500">Ajusta los filtros para ver más resultados</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = ventas.map(venta => {
+        const metodoPagoColors = {
+          'efectivo': 'bg-green-100 text-green-800',
+          'débito': 'bg-blue-100 text-blue-800',
+          'crédito': 'bg-purple-100 text-purple-800',
+          'cheque': 'bg-yellow-100 text-yellow-800'
+        };
+        
+        return `
+          <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 group">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white text-lg font-bold">
+                  #${ventas.indexOf(venta) + 1}
+                </div>
+                <div>
+                  <div class="flex items-center gap-3 mb-1">
+                    <h4 class="text-lg font-semibold text-gray-800">${venta.clientes?.nombre || 'Cliente no encontrado'}</h4>
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${metodoPagoColors[venta.metodo_pago] || 'bg-gray-100 text-gray-800'}">
+                      ${venta.metodo_pago?.charAt(0).toUpperCase() + venta.metodo_pago?.slice(1) || 'N/A'}
+                    </span>
+                    ${venta.descuento > 0 ? `
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        -${venta.descuento}% desc.
+                      </span>
+                    ` : ''}
+                  </div>
+                  <div class="flex items-center gap-4 text-sm text-gray-600">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                      </svg>
+                      ${utils.formatDate(venta.created_at)}
+                    </span>
+                    ${venta.clientes?.telefono ? `
+                      <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                        </svg>
+                        ${venta.clientes.telefono}
+                      </span>
+                    ` : ''}
+                    ${venta.numero_factura ? `
+                      <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        ${venta.numero_factura}
+                      </span>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex items-center gap-4">
+                <div class="text-right">
+                  <div class="text-2xl font-bold text-green-600">${utils.formatCurrency(venta.total)}</div>
+                  <div class="text-sm text-gray-500">${venta.tipo_comprobante || 'ticket'}</div>
+                  ${venta.condicion_pago === 'credito' ? `
+                    <div class="text-xs text-orange-600 font-medium">A crédito</div>
+                  ` : ''}
+                </div>
+                
+                <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <button onclick="verDetalleVenta('${venta.id}')" 
+                    class="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                    title="Ver detalles">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+    } catch (error) {
+      console.error('Error cargando historial completo:', error);
+      console.error('Detalles:', error.message, error.details, error.hint);
+      utils.showNotification('Error al cargar historial completo: ' + (error.message || 'Error desconocido'), 'error');
+    }
+  }
+  
+  async function mostrarDetalleVenta(ventaId) {
+    try {
+      // Cargar datos de la venta
+      const { data: venta, error: errorVenta } = await supabase
+        .from('ventas')
+        .select(`
+          *,
+          clientes(*),
+          usuario:profiles!ventas_usuario_id_fkey(nombre, apellido),
+          vendedor:profiles!ventas_vendedor_id_fkey(nombre, apellido)
+        `)
+        .eq('id', ventaId)
+        .single();
+      
+      if (errorVenta) throw errorVenta;
+      
+      // Cargar detalles de la venta
+      const { data: detalles, error: errorDetalles } = await supabase
+        .from('venta_detalle')
+        .select(`
+          *,
+          productos(nombre, tipo, marca, precio_calculado, stock)
+        `)
+        .eq('venta_id', ventaId)
+        .order('id');
+      
+      if (errorDetalles) throw errorDetalles;
+      
+      // Mostrar modal
+      const modal = document.getElementById('modal-detalle-venta');
+      const contenido = document.getElementById('contenido-detalle-venta');
+      const numero = document.getElementById('venta-numero');
+      
+      numero.textContent = `Venta #${ventaId.slice(-8).toUpperCase()}`;
+      
+      const metodoPagoIcons = {
+        'efectivo': '💵',
+        'débito': '💳',
+        'crédito': '📎',
+        'cheque': '📝'
+      };
+      
+      contenido.innerHTML = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Información de la Venta -->
+          <div class="space-y-6">
+            <div class="bg-gray-50 rounded-xl p-6">
+              <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Información General
+              </h4>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="text-gray-600">Fecha:</span>
+                  <p class="font-medium">${utils.formatDate(venta.created_at)}</p>
+                </div>
+                <div>
+                  <span class="text-gray-600">Total:</span>
+                  <p class="font-bold text-green-600 text-lg">${utils.formatCurrency(venta.total)}</p>
+                </div>
+                <div>
+                  <span class="text-gray-600">Método de Pago:</span>
+                  <p class="font-medium">${metodoPagoIcons[venta.metodo_pago] || ''} ${venta.metodo_pago?.charAt(0).toUpperCase() + venta.metodo_pago?.slice(1) || 'N/A'}</p>
+                </div>
+                <div>
+                  <span class="text-gray-600">Descuento:</span>
+                  <p class="font-medium ${venta.descuento > 0 ? 'text-orange-600' : ''}">${venta.descuento || 0}%</p>
+                </div>
+                ${venta.tipo_comprobante ? `
+                  <div>
+                    <span class="text-gray-600">Comprobante:</span>
+                    <p class="font-medium">${venta.tipo_comprobante.replace('_', ' ').toUpperCase()}</p>
+                  </div>
+                ` : ''}
+                ${venta.condicion_pago ? `
+                  <div>
+                    <span class="text-gray-600">Condición:</span>
+                    <p class="font-medium ${venta.condicion_pago === 'credito' ? 'text-orange-600' : 'text-green-600'}">
+                      ${venta.condicion_pago === 'credito' ? 'A crédito' : 'Contado'}
+                    </p>
+                  </div>
+                ` : ''}
+                ${venta.numero_factura ? `
+                  <div class="col-span-2">
+                    <span class="text-gray-600">Número de Factura:</span>
+                    <p class="font-bold text-blue-600">${venta.numero_factura}</p>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <!-- Información del Cliente -->
+            ${venta.clientes ? `
+              <div class="bg-blue-50 rounded-xl p-6">
+                <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                  </svg>
+                  Cliente
+                </h4>
+                <div class="space-y-2">
+                  <div>
+                    <span class="text-gray-600">Nombre:</span>
+                    <p class="font-semibold text-blue-800">${venta.clientes.nombre}</p>
+                  </div>
+                  ${venta.clientes.telefono ? `
+                    <div>
+                      <span class="text-gray-600">Teléfono:</span>
+                      <p class="font-medium">${venta.clientes.telefono}</p>
+                    </div>
+                  ` : ''}
+                  ${venta.clientes.email ? `
+                    <div>
+                      <span class="text-gray-600">Email:</span>
+                      <p class="font-medium">${venta.clientes.email}</p>
+                    </div>
+                  ` : ''}
+                  ${venta.clientes.direccion ? `
+                    <div>
+                      <span class="text-gray-600">Dirección:</span>
+                      <p class="font-medium">${venta.clientes.direccion}</p>
+                    </div>
+                  ` : ''}
+                  ${venta.clientes.categoria_cliente ? `
+                    <div>
+                      <span class="text-gray-600">Categoría:</span>
+                      <p class="font-medium text-blue-600">${venta.clientes.categoria_cliente.toUpperCase()}</p>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            ` : ''}
+            
+            ${venta.fecha_vencimiento ? `
+              <div class="bg-orange-50 rounded-xl p-6">
+                <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  Información de Crédito
+                </h4>
+                <div class="space-y-2">
+                  <div>
+                    <span class="text-gray-600">Fecha de Vencimiento:</span>
+                    <p class="font-bold text-orange-600">${utils.formatDate(venta.fecha_vencimiento)}</p>
+                  </div>
+                  ${venta.plazo_cheque ? `
+                    <div>
+                      <span class="text-gray-600">Plazo:</span>
+                      <p class="font-medium">${venta.plazo_cheque} días</p>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+          
+          <!-- Productos Vendidos -->
+          <div>
+            <div class="bg-green-50 rounded-xl p-6">
+              <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+                Productos (${detalles?.length || 0})
+              </h4>
+              
+              <div class="space-y-3 max-h-96 overflow-y-auto">
+                ${detalles?.map(detalle => `
+                  <div class="bg-white rounded-lg p-4 border border-green-200">
+                    <div class="flex items-center justify-between mb-2">
+                      <h5 class="font-semibold text-gray-800">${detalle.productos?.nombre || 'Producto no encontrado'}</h5>
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        x${detalle.cantidad}
+                      </span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                      ${detalle.productos?.tipo ? `
+                        <div>
+                          <span class="text-gray-600">Tipo:</span>
+                          <span class="font-medium">${detalle.productos.tipo}</span>
+                        </div>
+                      ` : ''}
+                      ${detalle.productos?.marca ? `
+                        <div>
+                          <span class="text-gray-600">Marca:</span>
+                          <span class="font-medium">${detalle.productos.marca}</span>
+                        </div>
+                      ` : ''}
+                      <div>
+                        <span class="text-gray-600">Precio Unit.:</span>
+                        <span class="font-medium">${utils.formatCurrency(detalle.precio_unitario)}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600">Subtotal:</span>
+                        <span class="font-bold text-green-600">${utils.formatCurrency(detalle.subtotal)}</span>
+                      </div>
+                      ${detalle.productos?.stock !== undefined ? `
+                        <div>
+                          <span class="text-gray-600">Stock Actual:</span>
+                          <span class="font-medium ${detalle.productos.stock <= 5 ? 'text-red-600' : 'text-gray-800'}">
+                            ${detalle.productos.stock}
+                          </span>
+                        </div>
+                      ` : ''}
+                    </div>
+                  </div>
+                `).join('') || '<p class="text-center text-gray-500 py-4">No hay productos registrados</p>'}
+              </div>
+              
+              <div class="mt-4 pt-4 border-t border-green-200">
+                <div class="space-y-2">
+                  ${venta.descuento > 0 ? `
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-600">Subtotal:</span>
+                      <span class="font-medium">${utils.formatCurrency(parseFloat(venta.total) / (1 - venta.descuento / 100))}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-600">Descuento (${venta.descuento}%):</span>
+                      <span class="font-medium text-orange-600">-${utils.formatCurrency(parseFloat(venta.total) / (1 - venta.descuento / 100) * venta.descuento / 100)}</span>
+                    </div>
+                  ` : ''}
+                  <div class="flex justify-between items-center pt-2 border-t border-green-300">
+                    <span class="text-lg font-semibold text-gray-700">Total:</span>
+                    <span class="text-2xl font-bold text-green-600">${utils.formatCurrency(venta.total)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        ${venta.observaciones ? `
+          <div class="mt-6 bg-yellow-50 rounded-xl p-6">
+            <h4 class="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+              <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+              </svg>
+              Observaciones
+            </h4>
+            <p class="text-gray-700">${venta.observaciones}</p>
+          </div>
+        ` : ''}
+      `;
+      
+      modal.classList.remove('hidden');
+      
+    } catch (error) {
+      console.error('Error cargando detalle de venta:', error);
+      console.error('Detalles:', error.message, error.details, error.hint);
+      utils.showNotification('Error al cargar detalle de venta: ' + (error.message || 'Error desconocido'), 'error');
+    }
+  }
+  
+  function exportarHistorial() {
+    // Obtener datos actuales del historial
+    const ventas = Array.from(document.querySelectorAll('#lista-historial-completo > div')).map((div, index) => {
+      const fechaElement = div.querySelector('svg + span');
+      const clienteElement = div.querySelector('h4');
+      const totalElement = div.querySelector('.text-2xl');
+      const metodoPagoElement = div.querySelector('.px-2.py-1.rounded-full');
+      
+      return {
+        'Número': index + 1,
+        'Cliente': clienteElement?.textContent || 'N/A',
+        'Fecha': fechaElement?.textContent || 'N/A',
+        'Método de Pago': metodoPagoElement?.textContent || 'N/A',
+        'Total': totalElement?.textContent || 'N/A'
+      };
+    });
+    
+    if (ventas.length === 0) {
+      utils.showNotification('No hay datos para exportar', 'warning');
+      return;
+    }
+    
+    // Convertir a CSV
+    const headers = Object.keys(ventas[0]);
+    const csvContent = [
+      headers.join(','),
+      ...ventas.map(row => headers.map(header => {
+        const value = row[header];
+        return typeof value === 'string' && (value.includes(',') || value.includes('"'))
+          ? `"${value.replace(/"/g, '""')}"`
+          : value;
+      }).join(','))
+    ].join('\n');
+    
+    // Crear y descargar archivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `historial_ventas_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    utils.showNotification('Historial exportado exitosamente', 'success');
+  }
+  
+  // Event listeners para modales
+  function setupModalEventListeners() {
+    // Cerrar historial completo
+    document.getElementById('cerrar-historial-completo').addEventListener('click', () => {
+      document.getElementById('modal-historial-completo').classList.add('hidden');
+    });
+    
+    // Cerrar detalle venta
+    document.getElementById('cerrar-detalle-venta').addEventListener('click', () => {
+      document.getElementById('modal-detalle-venta').classList.add('hidden');
+    });
+    
+    // Filtros del historial
+    document.getElementById('aplicar-filtros-historial').addEventListener('click', () => {
+      const filtros = {
+        cliente: document.getElementById('filtro-historial-cliente').value,
+        metodo: document.getElementById('filtro-historial-metodo').value,
+        desde: document.getElementById('filtro-historial-desde').value,
+        hasta: document.getElementById('filtro-historial-hasta').value,
+        montoMin: document.getElementById('filtro-historial-monto-min').value
+      };
+      
+      cargarHistorialCompleto(filtros);
+    });
+    
+    // Exportar historial
+    document.getElementById('exportar-historial').addEventListener('click', exportarHistorial);
+    
+    // Cerrar modales con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('modal-historial-completo').classList.add('hidden');
+        document.getElementById('modal-detalle-venta').classList.add('hidden');
+      }
+    });
+  }
+
   // Inicialización
   setupEventListeners();
+  setupModalEventListeners();
   await cargarTodosLosDatos();
 }

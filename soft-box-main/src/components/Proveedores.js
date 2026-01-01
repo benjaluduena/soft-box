@@ -145,6 +145,12 @@ export async function renderProveedores(container) {
               </div>
               
               <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Margen de Ganancia (%)</label>
+                <input name="margen_ganancia" type="number" step="0.01" min="0" max="1000" placeholder="30.00" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200" />
+                <p class="text-sm text-gray-500 mt-1">Margen por defecto para productos de este proveedor</p>
+              </div>
+              
+              <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
                 <input name="telefono" placeholder="Teléfono" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200" />
               </div>
@@ -278,6 +284,17 @@ export async function renderProveedores(container) {
             </div>
           ` : ''}
           
+          ${prov.margen_ganancia !== null && prov.margen_ganancia !== undefined ? `
+            <div class="flex items-center gap-3 text-sm">
+              <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+              </div>
+              <span class="text-gray-600">Margen: <span class="font-medium text-green-600">${(prov.margen_ganancia * 100).toFixed(1)}%</span></span>
+            </div>
+          ` : ''}
+          
           ${prov.telefono ? `
             <div class="flex items-center gap-3 text-sm">
               <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -354,6 +371,7 @@ export async function renderProveedores(container) {
     form.telefono.value = proveedor.telefono || '';
     form.email.value = proveedor.email || '';
     form.rubro.value = proveedor.rubro || '';
+    form.margen_ganancia.value = proveedor.margen_ganancia ? (proveedor.margen_ganancia * 100).toFixed(2) : '30.00';
     
     // Mostrar modal con animación
     modal.classList.remove('hidden');
@@ -389,7 +407,8 @@ export async function renderProveedores(container) {
       cuit: form.cuit.value.trim(),
       telefono: form.telefono.value.trim(),
       email: form.email.value.trim(),
-      rubro: form.rubro.value.trim()
+      rubro: form.rubro.value.trim(),
+      margen_ganancia: parseFloat(form.margen_ganancia.value) / 100 || 0.30
     };
     
     if (!nuevo.nombre) {

@@ -693,7 +693,10 @@ function loadHighchartsLibrary() {
 
 async function createVentasChart(type = 'monto') {
   const chartContainer = document.getElementById('chart-ventas');
-  if (!chartContainer) return;
+  if (!chartContainer || !chartContainer.offsetParent) {
+    console.warn('Contenedor chart-ventas no disponible o no visible');
+    return;
+  }
 
   try {
     const chartData = await loadVentasChartData(type);
@@ -805,7 +808,10 @@ async function createProductosChart(type = 'cantidad') {
 
 async function createMargenTrendChart() {
   const chartContainer = document.getElementById('chart-margen-trend');
-  if (!chartContainer) return;
+  if (!chartContainer || !chartContainer.offsetParent) {
+    console.warn('Contenedor chart-margen-trend no disponible o no visible');
+    return;
+  }
 
   try {
     const chartData = await loadMargenTrendData();

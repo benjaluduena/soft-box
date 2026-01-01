@@ -67,38 +67,43 @@ export async function renderClientes(container) {
             </div>
             <form id="cliente-form" class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Nombre completo</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nombre completo *</label>
                 <input 
                   name="nombre" 
                   placeholder="Ingresa el nombre completo" 
                   required 
                   class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
+                <div id="nombre-error" class="hidden mt-1 text-sm text-red-600"></div>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
                 <input 
                   name="telefono" 
-                  placeholder="Ingresa el teléfono" 
+                  type="tel"
+                  placeholder="Ej: +54 11 1234-5678 o 011 1234-5678" 
                   class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
+                <div id="telefono-error" class="hidden mt-1 text-sm text-red-600"></div>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
                 <input 
                   name="email" 
                   type="email"
-                  placeholder="Ingresa el email" 
+                  placeholder="ejemplo@correo.com" 
                   class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
+                <div id="email-error" class="hidden mt-1 text-sm text-red-600"></div>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Dirección</label>
                 <input 
                   name="direccion" 
-                  placeholder="Ingresa la dirección" 
+                  placeholder="Calle, número, ciudad" 
                   class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
+                <div id="direccion-error" class="hidden mt-1 text-sm text-red-600"></div>
               </div>
               <div class="flex gap-3 pt-4">
                 <button 
@@ -267,7 +272,98 @@ export async function renderClientes(container) {
     });
   }
 
-  buscarInput.oninput = () => cargarClientes(buscarInput.value);
+  // Utilidades de validación
+  const validacion = {
+    nombre: (nombre) => {
+      if (!nombre || nombre.trim().length < 2) {
+        return 'El nombre debe tener al menos 2 caracteres';
+      }
+      if (nombre.trim().length > 100) {
+        return 'El nombre no puede exceder 100 caracteres';
+      }
+      return null;
+    },
+
+    telefono: (telefono) => {
+      if (!telefono) return null; // El teléfono es opcional
+      
+      // Remover espacios, guiones y paréntesis para validación
+      const telefonoLimpio = telefono.replace(/[\s\-\(\)\+]/g, '');
+      
+      // Validar que contenga solo números
+      if (!/^\d{8,15}$/.test(telefonoLimpio)) {
+        return 'El teléfono debe tener entre 8 y 15 dígitos';
+      }
+      
+      return null;
+    },
+
+    email: (email) => {
+      if (!email) return null; // El email es opcional
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return 'Formato de email inválido';
+      }
+      
+      return null;
+    },
+
+    direccion: (direccion) => {
+      if (direccion && direccion.length > 200) {
+        return 'La dirección no puede exceder 200 caracteres';
+      }
+      return null;
+    },
+
+    validarFormulario: (datos) => {
+      const errores = {};
+      
+      const errorNombre = validacion.nombre(datos.nombre);
+      if (errorNombre) errores.nombre = errorNombre;
+      
+      const errorTelefono = validacion.telefono(datos.telefono);
+      if (errorTelefono) errores.telefono = errorTelefono;
+      
+      const errorEmail = validacion.email(datos.email);
+      if (errorEmail) errores.email = errorEmail;
+      
+      const errorDireccion = validacion.direccion(datos.direccion);
+      if (errorDireccion) errores.direccion = errorDireccion;
+      
+      return errores;
+    },
+
+    mostrarErrores: (errores) => {
+      // Limpiar errores previos
+      ['nombre', 'telefono', 'email', 'direccion'].forEach(campo => {
+        const errorDiv = document.getElementById(`${campo}-error`);
+        if (errorDiv) {
+          errorDiv.classList.add('hidden');
+          errorDiv.textContent = '';
+        }
+      });
+      
+      // Mostrar nuevos errores
+      Object.keys(errores).forEach(campo => {
+        const errorDiv = document.getElementById(`${campo}-error`);
+        if (errorDiv) {
+          errorDiv.textContent = errores[campo];
+          errorDiv.classList.remove('hidden');
+        }
+      });
+    }
+  };
+
+  // Debounce para búsqueda
+  let timeoutBusqueda;
+  buscarInput.oninput = (e) => {
+    clearTimeout(timeoutBusqueda);
+    timeoutBusqueda = setTimeout(() => {
+      cargarClientes(e.target.value);
+    }, 300);
+  };
+  
   document.getElementById('nuevo-cliente').onclick = () => mostrarFormCliente();
 
   async function mostrarFormCliente(id) {
@@ -301,31 +397,115 @@ export async function renderClientes(container) {
     const onKey = (e) => { if (e.key === 'Escape') cerrarModal(); };
     document.addEventListener('keydown', onKey, { once: true });
     
+    // Configurar validación en tiempo real
+    // Ya tenemos la referencia del form arriba
+    
+    form.nombre.addEventListener('blur', () => {
+      const error = validacion.nombre(form.nombre.value);
+      const errorDiv = document.getElementById('nombre-error');
+      if (error) {
+        errorDiv.textContent = error;
+        errorDiv.classList.remove('hidden');
+        form.nombre.classList.add('border-red-500');
+      } else {
+        errorDiv.classList.add('hidden');
+        form.nombre.classList.remove('border-red-500');
+      }
+    });
+    
+    form.telefono.addEventListener('blur', () => {
+      const error = validacion.telefono(form.telefono.value);
+      const errorDiv = document.getElementById('telefono-error');
+      if (error) {
+        errorDiv.textContent = error;
+        errorDiv.classList.remove('hidden');
+        form.telefono.classList.add('border-red-500');
+      } else {
+        errorDiv.classList.add('hidden');
+        form.telefono.classList.remove('border-red-500');
+      }
+    });
+    
+    form.email.addEventListener('blur', () => {
+      const error = validacion.email(form.email.value);
+      const errorDiv = document.getElementById('email-error');
+      if (error) {
+        errorDiv.textContent = error;
+        errorDiv.classList.remove('hidden');
+        form.email.classList.add('border-red-500');
+      } else {
+        errorDiv.classList.add('hidden');
+        form.email.classList.remove('border-red-500');
+      }
+    });
+
     document.getElementById('cliente-form').onsubmit = async (e) => {
       e.preventDefault();
       const form = e.target;
       const nuevo = {
-        nombre: form.nombre.value,
-        telefono: form.telefono.value,
-        email: form.email.value,
-        direccion: form.direccion.value
+        nombre: form.nombre.value.trim(),
+        telefono: form.telefono.value.trim(),
+        email: form.email.value.trim(),
+        direccion: form.direccion.value.trim()
       };
       
-      const errorDiv = document.getElementById('cliente-form-error');
-      let res;
-      
-      if (id) {
-        res = await supabase.from('clientes').update(nuevo).eq('id', id);
-      } else {
-        res = await supabase.from('clientes').insert([nuevo]);
+      // Validar datos antes de enviar
+      const errores = validacion.validarFormulario(nuevo);
+      if (Object.keys(errores).length > 0) {
+        validacion.mostrarErrores(errores);
+        return;
       }
       
-      if (res.error) {
-        errorDiv.textContent = res.error.message;
-        errorDiv.classList.remove('hidden');
-      } else {
+      const errorDiv = document.getElementById('cliente-form-error');
+      const submitButton = form.querySelector('button[type="submit"]');
+      
+      try {
+        // Deshabilitar botón y mostrar loading
+        submitButton.disabled = true;
+        submitButton.innerHTML = `
+          <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          ${id ? 'Actualizando...' : 'Guardando...'}
+        `;
+        
+        let res;
+        if (id) {
+          res = await supabase.from('clientes').update(nuevo).eq('id', id).select();
+        } else {
+          res = await supabase.from('clientes').insert([nuevo]).select();
+        }
+        
+        if (res.error) {
+          throw new Error(res.error.message);
+        }
+        
+        // Mostrar notificación de éxito
+        mostrarNotificacion(id ? 'Cliente actualizado correctamente' : 'Cliente creado correctamente', 'success');
+        
         cerrarModal();
         cargarClientes(buscarInput.value);
+        
+        // Preguntar si desea agregar un vehículo al cliente recién creado
+        if (!id) { // Solo para clientes nuevos
+          setTimeout(() => {
+            preguntarAgregarVehiculo(res.data && res.data[0] ? res.data[0].id : null, nuevo.nombre);
+          }, 500);
+        }
+        
+      } catch (error) {
+        console.error('Error guardando cliente:', error);
+        errorDiv.textContent = error.message || 'Error al guardar el cliente';
+        errorDiv.classList.remove('hidden');
+      } finally {
+        // Restaurar botón
+        submitButton.disabled = false;
+        submitButton.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          ${id ? 'Actualizar' : 'Guardar'}
+        `;
       }
     };
   }
@@ -338,13 +518,104 @@ export async function renderClientes(container) {
     }, 200);
   }
 
-  async function eliminarCliente(id) {
-    if (!confirm('¿Estás seguro de que quieres eliminar este cliente? Esta acción no se puede deshacer.')) return;
+  // Función para mostrar notificaciones
+  function mostrarNotificacion(mensaje, tipo = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-full ${
+      tipo === 'success' ? 'bg-green-500 text-white' :
+      tipo === 'error' ? 'bg-red-500 text-white' :
+      tipo === 'warning' ? 'bg-yellow-500 text-black' :
+      'bg-blue-500 text-white'
+    }`;
     
-    const { error } = await supabase.from('clientes').delete().eq('id', id);
-    if (!error) {
-      cargarClientes(buscarInput.value);
-    }
+    notification.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="flex-shrink-0">
+          ${
+            tipo === 'success' ? '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>' :
+            tipo === 'error' ? '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>' :
+            '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>'
+          }
+        </div>
+        <div class="flex-1">
+          <p class="font-medium">${mensaje}</p>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animar entrada
+    setTimeout(() => {
+      notification.classList.remove('translate-x-full');
+    }, 10);
+    
+    // Auto-remover después de 3 segundos
+    setTimeout(() => {
+      notification.classList.add('translate-x-full');
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, 300);
+    }, 3000);
+  }
+
+  async function eliminarCliente(id) {
+    // Crear modal de confirmación personalizado
+    const confirmModal = document.createElement('div');
+    confirmModal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+    confirmModal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4 transform transition-all duration-300">
+        <div class="text-center">
+          <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+          </div>
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">¡Atención!</h3>
+          <p class="text-gray-600 mb-6">¿Estás seguro de que deseas eliminar este cliente?<br><strong>Esta acción no se puede deshacer.</strong></p>
+          
+          <div class="flex gap-3">
+            <button id="confirmar-eliminar-btn" class="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300">
+              Sí, eliminar
+            </button>
+            <button id="cancelar-eliminar-btn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-6 py-3 rounded-xl transition-all duration-300">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(confirmModal);
+    
+    // Event listeners
+    document.getElementById('confirmar-eliminar-btn').onclick = async () => {
+      try {
+        const { error } = await supabase.from('clientes').delete().eq('id', id);
+        if (error) throw error;
+        
+        mostrarNotificacion('Cliente eliminado correctamente', 'success');
+        cargarClientes(buscarInput.value);
+      } catch (error) {
+        console.error('Error eliminando cliente:', error);
+        mostrarNotificacion('Error al eliminar el cliente', 'error');
+      } finally {
+        document.body.removeChild(confirmModal);
+      }
+    };
+    
+    document.getElementById('cancelar-eliminar-btn').onclick = () => {
+      document.body.removeChild(confirmModal);
+    };
+    
+    // Cerrar con click fuera del modal
+    confirmModal.onclick = (e) => {
+      if (e.target === confirmModal) {
+        document.body.removeChild(confirmModal);
+      }
+    };
   }
 
   async function mostrarVehiculos(cliente_id) {
@@ -353,4 +624,81 @@ export async function renderClientes(container) {
   }
 
   cargarClientes();
+
+  // Función para preguntar si agregar vehículo después de crear cliente
+  async function preguntarAgregarVehiculo(clienteId, nombreCliente) {
+    if (!clienteId) {
+      // Si no tenemos el ID, intentar obtenerlo del cliente recién creado
+      const { data } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('nombre', nombreCliente)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (data && data.length > 0) {
+        clienteId = data[0].id;
+      } else {
+        return; // No podemos continuar sin ID
+      }
+    }
+
+    // Crear modal de confirmación personalizado
+    const confirmModal = document.createElement('div');
+    confirmModal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+    confirmModal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4 transform transition-all duration-300">
+        <div class="text-center">
+          <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">¡Cliente creado exitosamente!</h3>
+          <p class="text-gray-600 mb-2">El cliente <strong>${nombreCliente}</strong> ha sido registrado.</p>
+          <p class="text-gray-600 mb-6">¿Deseas agregar un vehículo a este cliente ahora?</p>
+          
+          <div class="flex gap-3">
+            <button id="agregar-vehiculo-btn" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13"></path>
+              </svg>
+              Sí, agregar vehículo
+            </button>
+            <button id="cerrar-confirm-btn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-6 py-3 rounded-xl transition-all duration-300">
+              Ahora no
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(confirmModal);
+    
+    // Event listeners para los botones
+    document.getElementById('agregar-vehiculo-btn').onclick = () => {
+      document.body.removeChild(confirmModal);
+      mostrarVehiculos(clienteId);
+    };
+    
+    document.getElementById('cerrar-confirm-btn').onclick = () => {
+      document.body.removeChild(confirmModal);
+    };
+    
+    // Cerrar con click fuera del modal
+    confirmModal.onclick = (e) => {
+      if (e.target === confirmModal) {
+        document.body.removeChild(confirmModal);
+      }
+    };
+    
+    // Cerrar con Escape
+    const closeOnEscape = (e) => {
+      if (e.key === 'Escape') {
+        document.body.removeChild(confirmModal);
+        document.removeEventListener('keydown', closeOnEscape);
+      }
+    };
+    document.addEventListener('keydown', closeOnEscape);
+  }
 } 
